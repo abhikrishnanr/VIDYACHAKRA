@@ -24,13 +24,15 @@ import type {
   RequestStatus,
   RevisionPublicationState,
   Semester,
+  UniversityCalendarEntry,
+  UniversityCalendarSubmission,
   UniversityOperatingModel,
 } from "./types";
 import { defaultDomainState } from "./domain-data";
 
 type Toast = { id: number; title: string; message: string };
 
-export const DEMO_STATE_VERSION = 6;
+export const DEMO_STATE_VERSION = 7;
 
 export const initialDemoState: DemoSessionState = {
   demoStateVersion: DEMO_STATE_VERSION,
@@ -85,6 +87,23 @@ type DemoStateContextValue = DemoSessionState & {
   setUniversityOperatingModel: (
     universityId: string,
     operatingModel: UniversityOperatingModel,
+  ) => boolean;
+  saveUniversityCalendarSubmission: (
+    record: UniversityCalendarSubmission,
+    entries: UniversityCalendarEntry[],
+  ) => boolean;
+  submitUniversityCalendarSubmission: (
+    id: string,
+    draft?: {
+      record: UniversityCalendarSubmission;
+      entries: UniversityCalendarEntry[];
+    },
+  ) => boolean;
+  addUniversityCalendarReviewNote: (id: string, note: string) => boolean;
+  reviewUniversityCalendarSubmission: (
+    id: string,
+    decision: "lock" | "return",
+    note: string,
   ) => boolean;
   setSelectedProgramme: (programme: Programme) => void;
   setSelectedSemester: (semester: Semester) => void;
@@ -190,6 +209,37 @@ function migrateDemoState(stored: Partial<DemoSessionState>): DemoSessionState {
       })),
       ...storedUnits.filter((unit) => !defaultIds.has(unit.id)),
     ];
+    const defaultSubmissions = new Map(
+      initialDemoState.universityCalendarSubmissions.map((item) => [
+        item.id,
+        item,
+      ]),
+    );
+    migrated.universityCalendarSubmissions =
+      migrated.universityCalendarSubmissions.map((item) => {
+        const fallback = defaultSubmissions.get(item.id);
+        return {
+          ...fallback,
+          ...item,
+          title:
+            item.title ??
+            fallback?.title ??
+            "Structured University Academic Calendar",
+          applicableSemesters:
+            item.applicableSemesters?.length
+              ? item.applicableSemesters
+              : (fallback?.applicableSemesters ?? [1, 3]),
+          createdAt:
+            item.createdAt ??
+            fallback?.createdAt ??
+            "2026-07-14T09:15:00.000Z",
+          reviewNote: item.reviewNote ?? fallback?.reviewNote ?? "",
+          declarationAccepted:
+            item.declarationAccepted ??
+            fallback?.declarationAccepted ??
+            false,
+        };
+      });
   }
 
   return migrated;
@@ -690,6 +740,305 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
     [commit, session.activeRole, session.universityProfiles, toast],
   );
 
+  const saveUniversityCalendarSubmission = useCallback(
+    (
+      record: UniversityCalendarSubmission,
+      entries: UniversityCalendarEntry[],
+    ) => {
+      if (session.activeRole !== "university") {
+        toast(
+          "University action required",
+          "Calendar drafts are maintained from the university workspace.",
+        );
+        return false;
+      }
+      const existing = session.universityCalendarSubmissions.find(
+        (item) => item.id === record.id,
+      );
+      if (existing?.status === "locked") {
+        toast(
+          "Calendar is locked",
+          "Published dates cannot be edited directly. Use the formal change-request workflow.",
+        );
+        return false;
+      }
+      commit((current) => ({
+        ...current,
+        universityCalendarSubmissions: existing
+          ? current.universityCalendarSubmissions.map((item) =>
+              item.id === record.id ? record : item,
+            )
+          : [record, ...current.universityCalendarSubmissions],
+        universityCalendarEntries: [
+          ...current.universityCalendarEntries.filter(
+            (entry) => entry.submissionId !== record.id,
+          ),
+          ...entries,
+        ],
+        demoAuditEntries: [
+          {
+            id: `calendar-submission-saved-${Date.now()}`,
+            action: existing
+              ? "Structured calendar draft updated"
+              : "Structured calendar draft created",
+            actor: "Prof. Anjali Menon",
+            actorRole: "University Nodal Officer",
+            scope: record.title,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail: `${entries.length} milestone records saved as structured calendar data. Supporting documents remain references only.`,
+            previousValue: existing ? existing.status : "No submission",
+            newValue: record.status,
+            workflowStage: "University Calendar Submission",
+            reference: record.id,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        existing ? "Draft updated" : "Draft created",
+        "The structured dates and scope have been saved locally.",
+      );
+      return true;
+    },
+    [
+      commit,
+      session.activeRole,
+      session.universityCalendarSubmissions,
+      toast,
+    ],
+  );
+
+  const submitUniversityCalendarSubmission = useCallback(
+    (
+      id: string,
+      draft?: {
+        record: UniversityCalendarSubmission;
+        entries: UniversityCalendarEntry[];
+      },
+    ) => {
+      if (session.activeRole !== "university") {
+        toast(
+          "University action required",
+          "Only the university workspace can submit an institutional calendar.",
+        );
+        return false;
+      }
+      const submission =
+        draft?.record ??
+        session.universityCalendarSubmissions.find((item) => item.id === id);
+      if (!submission || submission.status === "locked") return false;
+      const entries =
+        draft?.entries ??
+        session.universityCalendarEntries.filter(
+          (entry) => entry.submissionId === id,
+        );
+      const incomplete = entries.some(
+        (entry) =>
+          !entry.universityStartDate ||
+          (entry.ragStatus === "red" && !entry.deviationReason.trim()),
+      );
+      if (incomplete || !submission.declarationAccepted) {
+        toast(
+          "Submission needs attention",
+          "Complete every required date, explain each unauthorised difference and accept the declaration.",
+        );
+        return false;
+      }
+      commit((current) => ({
+        ...current,
+        universityCalendarSubmissions: current.universityCalendarSubmissions.some(
+          (item) => item.id === id,
+        )
+          ? current.universityCalendarSubmissions.map((item) =>
+              item.id === id
+                ? {
+                    ...submission,
+                    status: "submitted",
+                    submittedAt: new Date().toISOString(),
+                    reviewNote: "",
+                  }
+                : item,
+            )
+          : [
+              {
+                ...submission,
+                status: "submitted",
+                submittedAt: new Date().toISOString(),
+                reviewNote: "",
+              },
+              ...current.universityCalendarSubmissions,
+            ],
+        universityCalendarEntries: draft
+          ? [
+              ...current.universityCalendarEntries.filter(
+                (entry) => entry.submissionId !== id,
+              ),
+              ...entries,
+            ]
+          : current.universityCalendarEntries,
+        notificationCount: Math.max(current.notificationCount + 1, 4),
+        demoAuditEntries: [
+          {
+            id: `calendar-submission-submitted-${Date.now()}`,
+            action: "Annual academic calendar submitted",
+            actor: "Prof. Anjali Menon",
+            actorRole: "University Nodal Officer",
+            scope: submission.title,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail:
+              "Structured milestone dates, scope, deviations and declaration submitted to HEC for review.",
+            previousValue: submission.status,
+            newValue: "Submitted to HEC",
+            workflowStage: "Calendar Submission Review",
+            reference: id,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        "Calendar submitted to HEC",
+        "The structured annual calendar is now in the HEC review queue.",
+      );
+      return true;
+    },
+    [
+      commit,
+      session.activeRole,
+      session.universityCalendarEntries,
+      session.universityCalendarSubmissions,
+      toast,
+    ],
+  );
+
+  const reviewUniversityCalendarSubmission = useCallback(
+    (id: string, decision: "lock" | "return", note: string) => {
+      if (session.activeRole !== "monitoring") {
+        toast(
+          "HEC review action required",
+          "Calendar acceptance is available to the HEC Academic Monitoring Officer.",
+        );
+        return false;
+      }
+      const submission = session.universityCalendarSubmissions.find(
+        (item) => item.id === id,
+      );
+      if (!submission || !["submitted", "under_review"].includes(submission.status)) {
+        toast(
+          "Submission is not reviewable",
+          "Only submitted calendars can be accepted or returned.",
+        );
+        return false;
+      }
+      const now = new Date().toISOString();
+      commit((current) => ({
+        ...current,
+        universityCalendarSubmissions:
+          current.universityCalendarSubmissions.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  status: decision === "lock" ? "locked" : "returned",
+                  reviewedAt: now,
+                  lockedAt: decision === "lock" ? now : null,
+                  reviewNote: note.trim(),
+                }
+              : item,
+          ),
+        notificationCount: Math.max(current.notificationCount + 1, 5),
+        demoAuditEntries: [
+          {
+            id: `calendar-submission-review-${Date.now()}`,
+            action:
+              decision === "lock"
+                ? "University calendar accepted and locked"
+                : "University calendar returned for correction",
+            actor: "Meera Nair",
+            actorRole: "HEC Academic Monitoring Officer",
+            scope: submission.title,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail:
+              note.trim() ||
+              (decision === "lock"
+                ? "The structured calendar was accepted against the HEC baseline and locked for implementation."
+                : "Correction is required before the calendar can be accepted."),
+            previousValue: submission.status,
+            newValue: decision === "lock" ? "Locked" : "Returned",
+            workflowStage: "HEC Calendar Review",
+            reference: id,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        decision === "lock" ? "Calendar accepted and locked" : "Calendar returned",
+        decision === "lock"
+          ? "Direct date editing is disabled; future revisions require formal change control."
+          : "The university can now correct and resubmit the structured calendar.",
+      );
+      return true;
+    },
+    [
+      commit,
+      session.activeRole,
+      session.universityCalendarSubmissions,
+      toast,
+    ],
+  );
+
+  const addUniversityCalendarReviewNote = useCallback(
+    (id: string, note: string) => {
+      if (session.activeRole !== "monitoring" || !note.trim()) {
+        toast(
+          "Review note required",
+          "Enter a note from the HEC Academic Monitoring Officer.",
+        );
+        return false;
+      }
+      const submission = session.universityCalendarSubmissions.find(
+        (item) => item.id === id,
+      );
+      if (!submission || !["submitted", "under_review"].includes(submission.status)) {
+        return false;
+      }
+      commit((current) => ({
+        ...current,
+        universityCalendarSubmissions:
+          current.universityCalendarSubmissions.map((item) =>
+            item.id === id
+              ? { ...item, status: "under_review", reviewNote: note.trim() }
+              : item,
+          ),
+        demoAuditEntries: [
+          {
+            id: `calendar-review-note-${Date.now()}`,
+            action: "Calendar review note added",
+            actor: "Meera Nair",
+            actorRole: "HEC Academic Monitoring Officer",
+            scope: submission.title,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail: note.trim(),
+            previousValue: submission.reviewNote || "No review note",
+            newValue: "Review note recorded",
+            workflowStage: "Under HEC Review",
+            reference: id,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        "Review note recorded",
+        "The note is visible in the submission review record.",
+      );
+      return true;
+    },
+    [
+      commit,
+      session.activeRole,
+      session.universityCalendarSubmissions,
+      toast,
+    ],
+  );
+
   const setSelectedProgramme = useCallback(
     (selectedProgramme: Programme) => {
       commit((current) => ({ ...current, selectedProgramme }));
@@ -835,6 +1184,18 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
         committeeMeetingNote,
         requestStatus,
         revisionPublicationState: approved ? "ready" : "not-started",
+        universityCalendarEntries: current.universityCalendarEntries.map(
+          (entry) =>
+            entry.changeRequestId === "CR-2026-014"
+              ? {
+                  ...entry,
+                  ragStatus: approved ? ("amber" as const) : ("red" as const),
+                  ragReason: approved
+                    ? "Committee-approved exception awaiting publication in the official calendar."
+                    : "The proposed date remains an unauthorised deviation.",
+                }
+              : entry,
+        ),
         notificationCount: Math.max(current.notificationCount + 1, 6),
         demoAuditEntries: [
           {
@@ -1000,6 +1361,18 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       publicationSchedule: "",
       institutionsNotified: true,
       publicCalendarUpdated: true,
+      universityCalendarEntries: current.universityCalendarEntries.map(
+        (entry) =>
+          entry.changeRequestId === "CR-2026-014"
+            ? {
+                ...entry,
+                ragStatus: "green" as const,
+                ragReason:
+                  "Aligned through an approved institution-specific exception published in Calendar Version 1.1.",
+                evidenceStatus: "verified" as const,
+              }
+            : entry,
+      ),
       notificationCount: Math.max(current.notificationCount + 3, 8),
       demoAuditEntries: [
         {
@@ -1116,6 +1489,17 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       publicationSchedule: "",
       institutionsNotified: false,
       publicCalendarUpdated: false,
+      universityCalendarEntries: current.universityCalendarEntries.map(
+        (entry) =>
+          entry.changeRequestId === "CR-2026-014"
+            ? {
+                ...entry,
+                ragStatus: "amber" as const,
+                ragReason:
+                  "Formal change request submitted and awaiting HEC scrutiny.",
+              }
+            : entry,
+      ),
       notificationCount: Math.max(current.notificationCount + 1, 4),
       demoAuditEntries: [
         {
@@ -1187,6 +1571,10 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       setCourseMasterActive,
       saveAcademicDeliveryUnit,
       setUniversityOperatingModel,
+      saveUniversityCalendarSubmission,
+      submitUniversityCalendarSubmission,
+      addUniversityCalendarReviewNote,
+      reviewUniversityCalendarSubmission,
       setSelectedProgramme,
       setSelectedSemester,
       setRequestStatus,
@@ -1222,6 +1610,10 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       setCourseMasterActive,
       saveAcademicDeliveryUnit,
       setUniversityOperatingModel,
+      saveUniversityCalendarSubmission,
+      submitUniversityCalendarSubmission,
+      addUniversityCalendarReviewNote,
+      reviewUniversityCalendarSubmission,
       setSelectedProgramme,
       setSelectedSemester,
       setRequestStatus,

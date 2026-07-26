@@ -38,16 +38,33 @@ are strongly typed in `lib/types.ts`, realistic defaults live in
 
 `UniversityCalendarSubmission` is owned by a university for an academic year
 and programme type. Its scope can cover all delivery units, university teaching
-units only, or selected delivery units.
+units only, or selected delivery units. The submission records its title,
+applicable semesters, structured review note, declaration and the lifecycle
+`draft → submitted → under_review → returned or accepted → locked`.
 
 `UniversityCalendarEntry` belongs to a submission and references one HEC
 `CalendarMilestoneDefinition`. It retains both the locked Council baseline and
 the university date, along with actual completion, variance, evidence and any
 formal change-request reference.
 
+Milestone fields are rendered from the HEC definition's `dateInputType`;
+single dates, date ranges and deadlines therefore remain structured data.
+Documents can be retained only as supporting references and never replace the
+entry records as the authoritative university calendar.
+
+Calendar scope is inherited by the selected `AcademicDeliveryUnit` records.
+The UI summarises that coverage rather than visibly duplicating every calendar
+entry for every college or teaching unit.
+
 Calendar compliance is calculated only from the milestone alignment rule,
 baseline, university date and an approved exception. Reporting-only milestones
 remain distinct from date alignment.
+
+The Sahya Semester 1 Theory Examination scenario is the locked
+`UniversityCalendarEntry` referenced by CR-2026-014. Its shared state moves from
+red unauthorised deviation, to amber during request review, stays amber after
+approval pending publication, and becomes green only when Version 1.1 publishes
+the approved exception.
 
 ## Cohorts and student strength
 

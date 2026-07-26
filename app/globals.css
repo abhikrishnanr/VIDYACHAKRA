@@ -7,6 +7,7 @@
 @import "../components/domain/domain-placeholder.css";
 @import "../components/masters/master-data-workspace.css";
 @import "../components/institutions/institution-structure.css";
+@import "../components/calendar-submissions/calendar-submissions.css";
 
 :root {
   --navy: #102a43;

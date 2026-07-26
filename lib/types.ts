@@ -118,7 +118,9 @@ export type UniversityCalendarSubmission = {
   universityId: string;
   academicYearId: string;
   programmeType: ProgrammeType;
+  title: string;
   version: string;
+  applicableSemesters: SemesterNumber[];
   status:
     | "draft"
     | "submitted"
@@ -131,9 +133,12 @@ export type UniversityCalendarSubmission = {
     | "university_teaching_only"
     | "selected_delivery_units";
   selectedDeliveryUnitIds: string[];
+  createdAt: string;
   submittedAt: string | null;
   reviewedAt: string | null;
   lockedAt: string | null;
+  reviewNote: string;
+  declarationAccepted: boolean;
 };
 
 export type UniversityCalendarEntry = {

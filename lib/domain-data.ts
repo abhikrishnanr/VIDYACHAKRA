@@ -647,22 +647,30 @@ export const domainCalendarSubmissions: UniversityCalendarSubmission[] = [
   universityId: universityId as string,
   academicYearId: "ay-2026-27",
   programmeType: "FYUGP",
+  title: "FYUGP Annual Academic Calendar 2026–27",
   version: version as string,
+  applicableSemesters: [1, 3],
   status: status as UniversityCalendarSubmission["status"],
   scopeType: scopeType as UniversityCalendarSubmission["scopeType"],
   selectedDeliveryUnitIds:
     scopeType === "selected_delivery_units"
       ? ["du-periyar-centre", "du-periyar-idukki"]
       : [],
+  createdAt: "2026-07-14T09:15:00.000Z",
   submittedAt: "2026-07-18T10:00:00.000Z",
   reviewedAt:
     status === "accepted" || status === "locked"
       ? "2026-07-21T15:30:00.000Z"
       : null,
   lockedAt: status === "locked" ? "2026-07-22T09:00:00.000Z" : null,
+  reviewNote:
+    status === "locked"
+      ? "Accepted against the published FYUGP milestone definitions and locked for implementation."
+      : "",
+  declarationAccepted: true,
 }));
 
-const baselineDates: Record<
+export const domainCalendarBaselineDates: Record<
   string,
   { start: string; end: string | null }
 > = {
@@ -688,7 +696,7 @@ const baselineDates: Record<
 export const domainCalendarEntries: UniversityCalendarEntry[] =
   domainCalendarSubmissions.flatMap((submission) =>
     domainCalendarMilestones.map((milestone) => {
-      const baseline = baselineDates[milestone.id];
+      const baseline = domainCalendarBaselineDates[milestone.id];
       const sahyaTheory =
         submission.universityId === "sahya" && milestone.id === "cmd-theory";
       return {
