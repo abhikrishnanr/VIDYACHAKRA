@@ -8,7 +8,7 @@ export type DemoRoleId =
 
 export type WorkspaceRole = Exclude<DemoRoleId, "public">;
 
-export type AcademicYearLabel = "2026–27";
+export type AcademicYearLabel = string;
 export type Programme = "Four Year Undergraduate Programme (FYUGP)";
 export type Semester = "Semester 1" | "Semester 3";
 export type SemesterNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
@@ -262,6 +262,7 @@ export type DemoSessionState = {
   activeRole: DemoRoleId | null;
   activeInstitution: string;
   academicYear: AcademicYearLabel;
+  defaultAcademicYearId: string;
   selectedProgramme: Programme;
   selectedSemester: Semester;
   requestStatus: RequestStatus;

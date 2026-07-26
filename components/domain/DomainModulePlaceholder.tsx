@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -16,6 +17,7 @@ import {
   Users,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { CourseMasterCombobox } from "@/components/domain/CourseMasterCombobox";
 import {
   calculateFillRate,
   calculateReportingCompleteness,
@@ -144,6 +146,9 @@ function sentenceCase(value: string) {
 
 export function DomainModulePlaceholder({ module }: { module: DomainModule }) {
   const state = useDemoState();
+  const [selectedCourseMasterId, setSelectedCourseMasterId] = useState<string | null>(
+    "cm-bsc-cs",
+  );
   const config = moduleConfigs[module];
   const Icon = config.icon;
   const sahyaUnits = state.academicDeliveryUnits.filter(
@@ -291,7 +296,26 @@ export function DomainModulePlaceholder({ module }: { module: DomainModule }) {
               <h2>What is represented now</h2>
             </div>
           </div>
-          {module === "institutions" ? (
+          {module === "course-offerings" ? (
+            <div className="domain-course-selector-demo">
+              <span>Authoritative course selection</span>
+              <h3>Choose from active HEC Course Master records</h3>
+              <p>
+                The selected value returns a courseMasterId and is then bound to an
+                academic delivery unit. Custom course names are not accepted.
+              </p>
+              <CourseMasterCombobox
+                value={selectedCourseMasterId}
+                onChange={(courseMasterId) => {
+                  setSelectedCourseMasterId(courseMasterId);
+                  state.toast(
+                    "Official course selected",
+                    "The HEC Course Master reference is ready to bind to a delivery unit.",
+                  );
+                }}
+              />
+            </div>
+          ) : module === "institutions" ? (
             <div className="domain-record-list">
               {state.universityProfiles.map((university) => (
                 <Link

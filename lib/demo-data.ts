@@ -131,6 +131,21 @@ export const roleDefinitions: Record<DemoRoleId, DemoRoleDefinition> = {
     permissions: ["Publish revisions", "Lock versions", "Maintain audit trail"],
     navigation: [
       {
+        label: "Academic Years",
+        href: "/hec/masters/academic-years",
+        icon: "master",
+      },
+      {
+        label: "Milestone Master",
+        href: "/hec/masters/calendar-milestones",
+        icon: "calendar",
+      },
+      {
+        label: "Course Master",
+        href: "/hec/masters/courses",
+        icon: "course",
+      },
+      {
         label: "Publication Desk",
         href: "/hec/publication",
         icon: "publication",

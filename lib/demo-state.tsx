@@ -11,8 +11,11 @@ import {
 } from "react";
 import type {
   AcademicYearLabel,
+  AcademicYear,
+  CalendarMilestoneDefinition,
   CommitteeDecision,
   CompletionReport,
+  CourseMaster,
   DemoRoleId,
   DemoSessionState,
   HecRecommendation,
@@ -25,13 +28,14 @@ import { defaultDomainState } from "./domain-data";
 
 type Toast = { id: number; title: string; message: string };
 
-export const DEMO_STATE_VERSION = 4;
+export const DEMO_STATE_VERSION = 5;
 
 export const initialDemoState: DemoSessionState = {
   demoStateVersion: DEMO_STATE_VERSION,
   activeRole: null,
   activeInstitution: "Sahya Higher Studies University",
   academicYear: "2026–27",
+  defaultAcademicYearId: "ay-2026-27",
   selectedProgramme: "Four Year Undergraduate Programme (FYUGP)",
   selectedSemester: "Semester 1",
   requestStatus: "draft",
@@ -65,6 +69,16 @@ type DemoStateContextValue = DemoSessionState & {
   signOut: () => void;
   resetDemo: () => void;
   setAcademicYear: (year: AcademicYearLabel) => void;
+  saveAcademicYear: (record: AcademicYear, mode: "create" | "edit") => boolean;
+  setDefaultAcademicYear: (id: string) => boolean;
+  closeAcademicYear: (id: string) => boolean;
+  saveCalendarMilestone: (
+    record: CalendarMilestoneDefinition,
+    mode: "create" | "edit",
+  ) => boolean;
+  setCalendarMilestoneActive: (id: string, active: boolean) => boolean;
+  saveCourseMaster: (record: CourseMaster, mode: "create" | "edit") => boolean;
+  setCourseMasterActive: (id: string, active: boolean) => boolean;
   setSelectedProgramme: (programme: Programme) => void;
   setSelectedSemester: (semester: Semester) => void;
   setRequestStatus: (status: RequestStatus) => void;
@@ -136,6 +150,20 @@ function migrateDemoState(stored: Partial<DemoSessionState>): DemoSessionState {
   for (const key of domainCollectionKeys) {
     if (!Array.isArray(stored[key])) {
       (migrated[key] as unknown[]) = initialDemoState[key] as unknown[];
+    }
+  }
+
+  if ((stored.demoStateVersion ?? 0) < DEMO_STATE_VERSION) {
+    for (const key of domainCollectionKeys) {
+      const storedRecords = migrated[key] as Array<{ id: string }>;
+      const knownIds = new Set(storedRecords.map((record) => record.id));
+      const missingDefaults = (
+        initialDemoState[key] as Array<{ id: string }>
+      ).filter((record) => !knownIds.has(record.id));
+      (migrated[key] as Array<{ id: string }>) = [
+        ...storedRecords,
+        ...missingDefaults,
+      ];
     }
   }
 
@@ -219,6 +247,339 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       toast("Academic year selected", `The workspace is showing ${academicYear}.`);
     },
     [commit, toast],
+  );
+
+  const masterAdminAllowed = session.activeRole === "administrator";
+
+  const denyMasterMutation = useCallback(() => {
+    toast(
+      "Read-only master data",
+      "Editing is restricted to the HEC Calendar Administrator workspace.",
+    );
+  }, [toast]);
+
+  const saveAcademicYear = useCallback(
+    (record: AcademicYear, mode: "create" | "edit") => {
+      if (!masterAdminAllowed) {
+        denyMasterMutation();
+        return false;
+      }
+      commit((current) => ({
+        ...current,
+        academicYears:
+          mode === "create"
+            ? [...current.academicYears, record]
+            : current.academicYears.map((item) =>
+                item.id === record.id ? record : item,
+              ),
+        demoAuditEntries: [
+          {
+            id: `academic-year-${mode}-${Date.now()}`,
+            action:
+              mode === "create"
+                ? "Academic year created"
+                : "Academic year metadata updated",
+            actor: "Leela Krishnan",
+            actorRole: "HEC Calendar Administrator",
+            scope: record.label,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail: `${record.label} is ${record.status} from ${record.startDate} to ${record.endDate}.`,
+            previousValue: mode === "create" ? "No record" : "Previous metadata",
+            newValue: `${record.status} · Admission ${record.admissionYear}`,
+            workflowStage: "HEC Master Data Administration",
+            reference: record.id,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        mode === "create" ? "Academic year created" : "Academic year updated",
+        `${record.label} is now available across the local demonstration.`,
+      );
+      return true;
+    },
+    [commit, denyMasterMutation, masterAdminAllowed, toast],
+  );
+
+  const setDefaultAcademicYear = useCallback(
+    (id: string) => {
+      if (!masterAdminAllowed) {
+        denyMasterMutation();
+        return false;
+      }
+      const year = session.academicYears.find((item) => item.id === id);
+      if (!year) return false;
+      commit((current) => ({
+        ...current,
+        defaultAcademicYearId: id,
+        academicYear: year.label,
+        demoAuditEntries: [
+          {
+            id: `academic-year-default-${Date.now()}`,
+            action: "Default academic year selected",
+            actor: "Leela Krishnan",
+            actorRole: "HEC Calendar Administrator",
+            scope: year.label,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail: `${year.label} is now the default academic year shown in workspaces.`,
+            previousValue:
+              current.academicYears.find(
+                (item) => item.id === current.defaultAcademicYearId,
+              )?.label ?? current.academicYear,
+            newValue: year.label,
+            workflowStage: "HEC Master Data Administration",
+            reference: year.id,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast("Default academic year updated", `${year.label} is now selected by default.`);
+      return true;
+    },
+    [
+      commit,
+      denyMasterMutation,
+      masterAdminAllowed,
+      session.academicYears,
+      toast,
+    ],
+  );
+
+  const closeAcademicYear = useCallback(
+    (id: string) => {
+      if (!masterAdminAllowed) {
+        denyMasterMutation();
+        return false;
+      }
+      const year = session.academicYears.find((item) => item.id === id);
+      if (!year || id === session.defaultAcademicYearId) {
+        toast(
+          "Academic year cannot be closed",
+          "Select another default academic year before closing this record.",
+        );
+        return false;
+      }
+      commit((current) => ({
+        ...current,
+        academicYears: current.academicYears.map((item) =>
+          item.id === id ? { ...item, status: "closed" } : item,
+        ),
+        demoAuditEntries: [
+          {
+            id: `academic-year-close-${Date.now()}`,
+            action: "Academic year closed",
+            actor: "Leela Krishnan",
+            actorRole: "HEC Calendar Administrator",
+            scope: year.label,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail: "The academic year remains in history and cannot receive new records.",
+            previousValue: year.status,
+            newValue: "closed",
+            workflowStage: "HEC Master Data Administration",
+            reference: year.id,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast("Academic year closed", `${year.label} remains available for history.`);
+      return true;
+    },
+    [
+      commit,
+      denyMasterMutation,
+      masterAdminAllowed,
+      session.academicYears,
+      session.defaultAcademicYearId,
+      toast,
+    ],
+  );
+
+  const saveCalendarMilestone = useCallback(
+    (
+      record: CalendarMilestoneDefinition,
+      mode: "create" | "edit",
+    ) => {
+      if (!masterAdminAllowed) {
+        denyMasterMutation();
+        return false;
+      }
+      commit((current) => ({
+        ...current,
+        calendarMilestoneDefinitions:
+          mode === "create"
+            ? [...current.calendarMilestoneDefinitions, record]
+            : current.calendarMilestoneDefinitions.map((item) =>
+                item.id === record.id ? record : item,
+              ),
+        demoAuditEntries: [
+          {
+            id: `milestone-master-${mode}-${Date.now()}`,
+            action:
+              mode === "create"
+                ? "Calendar milestone definition created"
+                : "Calendar milestone definition updated",
+            actor: "Leela Krishnan",
+            actorRole: "HEC Calendar Administrator",
+            scope: record.title,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail: `${record.code} uses ${record.dateInputType.replaceAll("_", " ")} with ${record.alignmentRule.replaceAll("_", " ")} alignment.`,
+            previousValue: mode === "create" ? "No record" : "Previous definition",
+            newValue: `${record.active ? "Active" : "Inactive"} · Order ${record.displayOrder}`,
+            workflowStage: "HEC Master Data Administration",
+            reference: record.id,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        mode === "create" ? "Milestone created" : "Milestone updated",
+        `${record.title} is available to calendar submissions.`,
+      );
+      return true;
+    },
+    [commit, denyMasterMutation, masterAdminAllowed, toast],
+  );
+
+  const setCalendarMilestoneActive = useCallback(
+    (id: string, active: boolean) => {
+      if (!masterAdminAllowed) {
+        denyMasterMutation();
+        return false;
+      }
+      const record = session.calendarMilestoneDefinitions.find(
+        (item) => item.id === id,
+      );
+      if (!record) return false;
+      commit((current) => ({
+        ...current,
+        calendarMilestoneDefinitions:
+          current.calendarMilestoneDefinitions.map((item) =>
+            item.id === id ? { ...item, active } : item,
+          ),
+        demoAuditEntries: [
+          {
+            id: `milestone-master-status-${Date.now()}`,
+            action: active ? "Calendar milestone reactivated" : "Calendar milestone deactivated",
+            actor: "Leela Krishnan",
+            actorRole: "HEC Calendar Administrator",
+            scope: record.title,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail: active
+              ? "The definition can again be selected for future submissions."
+              : "Existing calendar entries remain intact; future selection is disabled.",
+            previousValue: active ? "Inactive" : "Active",
+            newValue: active ? "Active" : "Inactive",
+            workflowStage: "HEC Master Data Administration",
+            reference: record.id,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        active ? "Milestone reactivated" : "Milestone deactivated",
+        `${record.title} has been updated without altering existing submissions.`,
+      );
+      return true;
+    },
+    [
+      commit,
+      denyMasterMutation,
+      masterAdminAllowed,
+      session.calendarMilestoneDefinitions,
+      toast,
+    ],
+  );
+
+  const saveCourseMaster = useCallback(
+    (record: CourseMaster, mode: "create" | "edit") => {
+      if (!masterAdminAllowed) {
+        denyMasterMutation();
+        return false;
+      }
+      commit((current) => ({
+        ...current,
+        courseMasters:
+          mode === "create"
+            ? [...current.courseMasters, record]
+            : current.courseMasters.map((item) =>
+                item.id === record.id ? record : item,
+              ),
+        demoAuditEntries: [
+          {
+            id: `course-master-${mode}-${Date.now()}`,
+            action:
+              mode === "create"
+                ? "Official course master created"
+                : "Official course metadata updated",
+            actor: "Leela Krishnan",
+            actorRole: "HEC Calendar Administrator",
+            scope: record.courseName,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail: `${record.courseCode} · ${record.durationYears} years · ${record.totalSemesters} semesters.`,
+            previousValue: mode === "create" ? "No record" : "Previous metadata",
+            newValue: record.active ? "Active" : "Inactive",
+            workflowStage: "HEC Master Data Administration",
+            reference: record.id,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        mode === "create" ? "Course added" : "Course updated",
+        `${record.courseName} is now current in the HEC Course Master.`,
+      );
+      return true;
+    },
+    [commit, denyMasterMutation, masterAdminAllowed, toast],
+  );
+
+  const setCourseMasterActive = useCallback(
+    (id: string, active: boolean) => {
+      if (!masterAdminAllowed) {
+        denyMasterMutation();
+        return false;
+      }
+      const record = session.courseMasters.find((item) => item.id === id);
+      if (!record) return false;
+      commit((current) => ({
+        ...current,
+        courseMasters: current.courseMasters.map((item) =>
+          item.id === id ? { ...item, active } : item,
+        ),
+        demoAuditEntries: [
+          {
+            id: `course-master-status-${Date.now()}`,
+            action: active ? "Official course reactivated" : "Official course deactivated",
+            actor: "Leela Krishnan",
+            actorRole: "HEC Calendar Administrator",
+            scope: record.courseName,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail: active
+              ? "The course is available to future university offering selectors."
+              : "Existing institutional offerings are preserved; future selection is disabled.",
+            previousValue: active ? "Inactive" : "Active",
+            newValue: active ? "Active" : "Inactive",
+            workflowStage: "HEC Master Data Administration",
+            reference: record.id,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        active ? "Course reactivated" : "Course deactivated",
+        active
+          ? `${record.courseName} is selectable again.`
+          : `${record.courseName} is hidden from new university course selectors.`,
+      );
+      return true;
+    },
+    [
+      commit,
+      denyMasterMutation,
+      masterAdminAllowed,
+      session.courseMasters,
+      toast,
+    ],
   );
 
   const setSelectedProgramme = useCallback(
@@ -709,6 +1070,13 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       signOut,
       resetDemo,
       setAcademicYear,
+      saveAcademicYear,
+      setDefaultAcademicYear,
+      closeAcademicYear,
+      saveCalendarMilestone,
+      setCalendarMilestoneActive,
+      saveCourseMaster,
+      setCourseMasterActive,
       setSelectedProgramme,
       setSelectedSemester,
       setRequestStatus,
@@ -735,6 +1103,13 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       signOut,
       resetDemo,
       setAcademicYear,
+      saveAcademicYear,
+      setDefaultAcademicYear,
+      closeAcademicYear,
+      saveCalendarMilestone,
+      setCalendarMilestoneActive,
+      saveCourseMaster,
+      setCourseMasterActive,
       setSelectedProgramme,
       setSelectedSemester,
       setRequestStatus,

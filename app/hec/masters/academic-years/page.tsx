@@ -1,5 +1,5 @@
-import { DomainModulePlaceholder } from "@/components/domain/DomainModulePlaceholder";
+import { AcademicYearMaster } from "@/components/masters/AcademicYearMaster";
 
 export default function AcademicYearsPage() {
-  return <DomainModulePlaceholder module="academic-years" />;
+  return <AcademicYearMaster />;
 }
