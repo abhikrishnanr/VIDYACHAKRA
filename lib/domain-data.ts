@@ -425,22 +425,25 @@ export const domainUniversityProfiles: UniversityProfile[] = [
 ];
 
 export const domainAcademicDeliveryUnits: AcademicDeliveryUnit[] = [
-  ["du-sahya-campus", "sahya", "Sahya University Teaching Campus", "Sahya Campus", "university_campus", "Thrissur", "SHSU-CAMP-01"],
-  ["du-sahya-liberal", "sahya", "Sahya College of Liberal Studies", "Sahya Liberal", "affiliated_college", "Thrissur", "SHSU-AFF-01"],
-  ["du-sahya-nilgiri", "sahya", "Nilgiri College of Applied Sciences", "Nilgiri CAS", "affiliated_college", "Palakkad", "SHSU-AFF-02"],
-  ["du-sahya-pamba", "sahya", "Pamba Institute of Commerce", "Pamba Commerce", "affiliated_college", "Pathanamthitta", "SHSU-AFF-03"],
-  ["du-anan-campus", "ananthapuri", "Ananthapuri University Teaching Campus", "Ananthapuri Campus", "university_campus", "Thiruvananthapuram", "AUS-CAMP-01"],
-  ["du-anan-humanities", "ananthapuri", "Department of Humanities and Social Inquiry", "Humanities Department", "university_department", "Thiruvananthapuram", "AUS-DEPT-01"],
-  ["du-anan-sciences", "ananthapuri", "Department of Foundational Sciences", "Sciences Department", "university_department", "Thiruvananthapuram", "AUS-DEPT-02"],
-  ["du-vemb-humanities", "vembanad", "Vembanad College of Humanities", "Vembanad Humanities", "affiliated_college", "Kottayam", "VAU-AFF-01"],
-  ["du-vemb-kumarakom", "vembanad", "Kumarakom School of Sciences", "Kumarakom Sciences", "affiliated_college", "Kottayam", "VAU-AFF-02"],
-  ["du-vemb-lakeview", "vembanad", "Lakeview College of Management", "Lakeview Management", "affiliated_college", "Alappuzha", "VAU-AFF-03"],
-  ["du-malabar-beypore", "malabar", "Beypore College of Arts", "Beypore Arts", "affiliated_college", "Kozhikode", "MLU-AFF-01"],
-  ["du-malabar-kallayi", "malabar", "Kallayi Institute of Technology", "Kallayi Institute", "affiliated_college", "Kozhikode", "MLU-AFF-02"],
-  ["du-periyar-centre", "periyar", "Periyar Centre for Applied Learning", "Periyar Centre", "university_centre", "Idukki", "PVU-CENTRE-01"],
-  ["du-periyar-idukki", "periyar", "Idukki School of Economics and Science", "Idukki School", "constituent_college", "Idukki", "PVU-CONST-01"],
-  ["du-kuttanad-env", "kuttanad", "Kuttanad College of Environmental Studies", "Kuttanad Environmental", "affiliated_college", "Alappuzha", "KKU-AFF-01"],
-].map(([id, universityId, name, shortName, unitType, district, institutionCode]) => ({
+  ["du-sahya-campus", "sahya", "Sahya University Teaching Campus", "Sahya Campus", "university_campus", "Thrissur", "SHSU-CAMP-01", "ay-2023-24"],
+  ["du-sahya-humanities", "sahya", "School of Humanities", "Humanities School", "university_department", "Thrissur", "SHSU-DEPT-01", "ay-2024-25"],
+  ["du-sahya-science", "sahya", "School of Science and Technology", "Science & Technology", "university_department", "Thrissur", "SHSU-DEPT-02", "ay-2024-25"],
+  ["du-sahya-liberal", "sahya", "Sahya College of Liberal Studies", "Sahya Liberal", "affiliated_college", "Thrissur", "SHSU-AFF-01", "ay-2023-24"],
+  ["du-sahya-nilgiri", "sahya", "Nilgiri College of Applied Sciences", "Nilgiri CAS", "affiliated_college", "Palakkad", "SHSU-AFF-02", "ay-2024-25"],
+  ["du-sahya-pamba", "sahya", "Pamba Institute of Commerce", "Pamba Commerce", "affiliated_college", "Pathanamthitta", "SHSU-AFF-03", "ay-2024-25"],
+  ["du-anan-campus", "ananthapuri", "University Teaching Campus", "Ananthapuri Campus", "university_campus", "Thiruvananthapuram", "AUS-CAMP-01", "ay-2023-24"],
+  ["du-anan-humanities", "ananthapuri", "School of Languages", "Languages School", "university_department", "Thiruvananthapuram", "AUS-DEPT-01", "ay-2023-24"],
+  ["du-anan-sciences", "ananthapuri", "School of Computing", "Computing School", "university_department", "Thiruvananthapuram", "AUS-DEPT-02", "ay-2024-25"],
+  ["du-anan-social", "ananthapuri", "School of Social Sciences", "Social Sciences School", "university_department", "Thiruvananthapuram", "AUS-DEPT-03", "ay-2024-25"],
+  ["du-vemb-humanities", "vembanad", "Vembanad College of Humanities", "Vembanad Humanities", "affiliated_college", "Kottayam", "VAU-AFF-01", "ay-2023-24"],
+  ["du-vemb-kumarakom", "vembanad", "Kumarakom School of Sciences", "Kumarakom Sciences", "affiliated_college", "Kottayam", "VAU-AFF-02", "ay-2024-25"],
+  ["du-vemb-lakeview", "vembanad", "Lakeview College of Management", "Lakeview Management", "affiliated_college", "Alappuzha", "VAU-AFF-03", "ay-2024-25"],
+  ["du-malabar-beypore", "malabar", "Beypore College of Arts", "Beypore Arts", "affiliated_college", "Kozhikode", "MLU-AFF-01", "ay-2023-24"],
+  ["du-malabar-kallayi", "malabar", "Kallayi Institute of Technology", "Kallayi Institute", "affiliated_college", "Kozhikode", "MLU-AFF-02", "ay-2024-25"],
+  ["du-periyar-centre", "periyar", "Periyar Centre for Applied Learning", "Periyar Centre", "university_centre", "Idukki", "PVU-CENTRE-01", "ay-2023-24"],
+  ["du-periyar-idukki", "periyar", "Idukki School of Economics and Science", "Idukki School", "constituent_college", "Idukki", "PVU-CONST-01", "ay-2024-25"],
+  ["du-kuttanad-env", "kuttanad", "Kuttanad College of Environmental Studies", "Kuttanad Environmental", "affiliated_college", "Alappuzha", "KKU-AFF-01", "ay-2024-25"],
+].map(([id, universityId, name, shortName, unitType, district, institutionCode, teachingCommencedAcademicYearId]) => ({
   id: id as string,
   universityId: universityId as string,
   name: name as string,
@@ -449,6 +452,8 @@ export const domainAcademicDeliveryUnits: AcademicDeliveryUnit[] = [
   district: district as string,
   institutionCode: institutionCode as string,
   active: true,
+  teachingCommencedAcademicYearId:
+    teachingCommencedAcademicYearId as string,
 }));
 
 type OfferingBlueprint = {
@@ -461,8 +466,8 @@ type OfferingBlueprint = {
 };
 
 const offeringBlueprints: OfferingBlueprint[] = [
-  { id: "off-001", universityId: "sahya", deliveryUnitId: "du-sahya-campus", courseMasterId: "cm-bsc-cs" },
-  { id: "off-002", universityId: "sahya", deliveryUnitId: "du-sahya-campus", courseMasterId: "cm-ba-eco" },
+  { id: "off-001", universityId: "sahya", deliveryUnitId: "du-sahya-science", courseMasterId: "cm-bsc-cs" },
+  { id: "off-002", universityId: "sahya", deliveryUnitId: "du-sahya-humanities", courseMasterId: "cm-ba-eco" },
   { id: "off-003", universityId: "sahya", deliveryUnitId: "du-sahya-liberal", courseMasterId: "cm-ba-eng" },
   { id: "off-004", universityId: "sahya", deliveryUnitId: "du-sahya-liberal", courseMasterId: "cm-bcom" },
   { id: "off-005", universityId: "sahya", deliveryUnitId: "du-sahya-nilgiri", courseMasterId: "cm-bsc-cs" },
@@ -472,7 +477,7 @@ const offeringBlueprints: OfferingBlueprint[] = [
   { id: "off-009", universityId: "ananthapuri", deliveryUnitId: "du-anan-campus", courseMasterId: "cm-ba-eng", status: "submitted" },
   { id: "off-010", universityId: "ananthapuri", deliveryUnitId: "du-anan-campus", courseMasterId: "cm-bsc-psych" },
   { id: "off-011", universityId: "ananthapuri", deliveryUnitId: "du-anan-humanities", courseMasterId: "cm-ba-eco" },
-  { id: "off-012", universityId: "ananthapuri", deliveryUnitId: "du-anan-humanities", courseMasterId: "cm-bsw" },
+  { id: "off-012", universityId: "ananthapuri", deliveryUnitId: "du-anan-social", courseMasterId: "cm-bsw" },
   { id: "off-013", universityId: "ananthapuri", deliveryUnitId: "du-anan-sciences", courseMasterId: "cm-bsc-physics" },
   { id: "off-014", universityId: "ananthapuri", deliveryUnitId: "du-anan-sciences", courseMasterId: "cm-bsc-chem" },
   { id: "off-015", universityId: "vembanad", deliveryUnitId: "du-vemb-humanities", courseMasterId: "cm-ba-eng" },

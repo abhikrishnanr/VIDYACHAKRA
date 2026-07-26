@@ -26,7 +26,9 @@ are strongly typed in `lib/types.ts`, realistic defaults live in
 - `AcademicDeliveryUnit` is the mandatory unit of academic delivery. It may be a
   university campus, department, centre, constituent college or affiliated
   college. Teaching-only universities still use campus or department delivery
-  units, so no course offering floats directly under a university.
+  units, so no course offering floats directly under a university. The same
+  entity records the unit type, institution code, district, active status and
+  academic year in which teaching commenced.
 - `CourseOffering` joins an academic year, university, delivery unit and active
   HEC Course Master record. Every offering must have a `deliveryUnitId`.
 - `CourseBatch` belongs to one course offering and owns its sanctioned capacity.
@@ -89,10 +91,10 @@ Semester 1 Theory Examination deviation with CR-2026-014 in draft.
 The defaults include:
 
 - five academic years;
-- nine calendar milestone definitions;
+- seventeen calendar milestone definitions;
 - twelve HEC Course Master records;
 - six fictional universities with teaching-only, affiliating and hybrid models;
-- fifteen academic delivery units;
+- eighteen academic delivery units;
 - twenty-five course offerings with one or two batches;
 - admission cohorts and Semester 1–8 strength coverage;
 - high-vacancy, full, not-reported and above-capacity examples; and

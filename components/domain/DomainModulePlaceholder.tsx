@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { CourseMasterCombobox } from "@/components/domain/CourseMasterCombobox";
+import { AcademicDeliveryUnitSelector } from "@/components/domain/AcademicDeliveryUnitSelector";
 import {
   calculateFillRate,
   calculateReportingCompleteness,
@@ -148,6 +149,9 @@ export function DomainModulePlaceholder({ module }: { module: DomainModule }) {
   const state = useDemoState();
   const [selectedCourseMasterId, setSelectedCourseMasterId] = useState<string | null>(
     "cm-bsc-cs",
+  );
+  const [selectedDeliveryUnitId, setSelectedDeliveryUnitId] = useState<string | null>(
+    "du-sahya-science",
   );
   const config = moduleConfigs[module];
   const Icon = config.icon;
@@ -314,6 +318,17 @@ export function DomainModulePlaceholder({ module }: { module: DomainModule }) {
                   );
                 }}
               />
+              <AcademicDeliveryUnitSelector
+                universityId="sahya"
+                value={selectedDeliveryUnitId}
+                onChange={(deliveryUnitId) => {
+                  setSelectedDeliveryUnitId(deliveryUnitId);
+                  state.toast(
+                    "Delivery unit selected",
+                    "The offering now has a valid AcademicDeliveryUnit reference.",
+                  );
+                }}
+              />
             </div>
           ) : module === "institutions" ? (
             <div className="domain-record-list">
@@ -336,7 +351,25 @@ export function DomainModulePlaceholder({ module }: { module: DomainModule }) {
               ))}
             </div>
           ) : module === "vacancies" || module === "student-strength" ? (
-            <div className="domain-utilisation-sample">
+            <div className="domain-strength-context">
+              {module === "student-strength" ? (
+                <div className="domain-delivery-context">
+                  <span>Reporting context</span>
+                  <h3>Select the delivery unit before opening batch reports</h3>
+                  <AcademicDeliveryUnitSelector
+                    universityId="sahya"
+                    value={selectedDeliveryUnitId}
+                    onChange={(deliveryUnitId) => {
+                      setSelectedDeliveryUnitId(deliveryUnitId);
+                      state.toast(
+                        "Reporting context changed",
+                        "Student-strength batches are now scoped to the selected delivery unit.",
+                      );
+                    }}
+                  />
+                </div>
+              ) : null}
+              <div className="domain-utilisation-sample">
               {state.semesterStrengthSnapshots.slice(0, 4).map((snapshot) => {
                 const warning = getCapacityWarning(
                   snapshot.sanctionedCapacity,
@@ -378,6 +411,7 @@ export function DomainModulePlaceholder({ module }: { module: DomainModule }) {
                 Seat-utilisation status is a separate operational signal and is not
                 calendar-compliance RAG.
               </p>
+              </div>
             </div>
           ) : (
             <ul className="domain-capability-list">

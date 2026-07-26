@@ -1,5 +1,5 @@
-import { DomainModulePlaceholder } from "@/components/domain/DomainModulePlaceholder";
+import { HECInstitutionDirectory } from "@/components/institutions/HECInstitutionDirectory";
 
 export default function InstitutionsPage() {
-  return <DomainModulePlaceholder module="institutions" />;
+  return <HECInstitutionDirectory />;
 }

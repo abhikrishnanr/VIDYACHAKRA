@@ -63,7 +63,7 @@ export const roleDefinitions: Record<DemoRoleId, DemoRoleDefinition> = {
       },
       { label: "Report Completion", href: "/university/completion", icon: "compliance" },
       { label: "Change Requests", href: "/university/change-requests", icon: "request" },
-      { label: "Affiliated Colleges", href: "/university/colleges", icon: "institution" },
+      { label: "Delivery Network", href: "/university/colleges", icon: "institution" },
     ],
     accent: "teal",
   },
@@ -128,8 +128,18 @@ export const roleDefinitions: Record<DemoRoleId, DemoRoleDefinition> = {
       "Publish approved revisions, lock official versions and maintain the audit trail.",
     identity: "HEC Calendar Secretariat",
     destination: "/administrator/dashboard",
-    permissions: ["Publish revisions", "Lock versions", "Maintain audit trail"],
+    permissions: [
+      "Manage master data",
+      "Classify institutions",
+      "Publish revisions",
+      "Maintain audit trail",
+    ],
     navigation: [
+      {
+        label: "Institution Directory",
+        href: "/hec/institutions",
+        icon: "institution",
+      },
       {
         label: "Academic Years",
         href: "/hec/masters/academic-years",

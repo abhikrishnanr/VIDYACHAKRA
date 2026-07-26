@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { AffiliatedCollegeMonitoring } from "@/components/university/AffiliatedCollegeMonitoring";
+import { UniversityDeliveryUnitMonitoring } from "@/components/institutions/UniversityDeliveryUnitMonitoring";
 
-export const metadata: Metadata = { title: "Affiliated College Readiness" };
+export const metadata: Metadata = { title: "Academic Delivery Network" };
 
 export default function CollegesPage() {
-  return <AffiliatedCollegeMonitoring />;
+  return <UniversityDeliveryUnitMonitoring />;
 }

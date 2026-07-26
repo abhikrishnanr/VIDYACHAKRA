@@ -110,6 +110,7 @@ export type AcademicDeliveryUnit = {
   district: string;
   institutionCode: string;
   active: boolean;
+  teachingCommencedAcademicYearId: string;
 };
 
 export type UniversityCalendarSubmission = {
