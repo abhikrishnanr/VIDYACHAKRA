@@ -2,5 +2,5 @@ import type { ReactNode } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 
 export default function WorkflowLayout({ children }: { children: ReactNode }) {
-  return <AppShell role="workflow">{children}</AppShell>;
+  return <AppShell role="committee">{children}</AppShell>;
 }

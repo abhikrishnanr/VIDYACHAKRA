@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { PrototypeIndicator } from "@/components/shared/PrototypeIndicator";
 import { DemoStateProvider } from "@/lib/demo-state";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://vidyachakra.example"),
+  metadataBase: new URL("https://vidyachakra.abhikrishnanr.chatgpt.site"),
   title: {
     default: "VIDYACHAKRA · One State. One Academic Rhythm.",
     template: "%s · VIDYACHAKRA",
@@ -13,13 +14,13 @@ export const metadata: Metadata = {
   openGraph: {
     title: "VIDYACHAKRA · One State. One Academic Rhythm.",
     description: "Kerala Higher Education Academic & Examination Calendar",
-    images: [{ url: "/og.png", width: 1672, height: 941, alt: "VIDYACHAKRA" }],
+    images: [{ url: "/og-workspaces.png", width: 1536, height: 1024, alt: "VIDYACHAKRA role-based academic calendar workspaces" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "VIDYACHAKRA · One State. One Academic Rhythm.",
     description: "Kerala Higher Education Academic & Examination Calendar",
-    images: ["/og.png"],
+    images: ["/og-workspaces.png"],
   },
   icons: {
     icon: "/brand/vidyachakra-mark.svg",
@@ -37,7 +38,7 @@ export default function RootLayout({
       <body>
         <DemoStateProvider>
           {children}
-          <div className="prototype-indicator">Illustrative Prototype</div>
+          <PrototypeIndicator />
         </DemoStateProvider>
       </body>
     </html>

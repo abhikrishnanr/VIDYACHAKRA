@@ -1,72 +1,121 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   Bell,
+  BookOpenCheck,
+  Building2,
   CalendarDays,
-  CheckCheck,
   ChevronDown,
   CircleUserRound,
   ClipboardCheck,
   FileClock,
+  FileText,
+  Gavel,
   HelpCircle,
+  Landmark,
   LayoutDashboard,
   Menu,
+  RotateCcw,
+  Scale,
   ShieldCheck,
+  SignpostBig,
+  UsersRound,
   X,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Brand } from "@/components/brand/Brand";
-import { academicYears, navigationByRole } from "@/lib/demo-data";
+import { AcademicYearSelector } from "@/components/shared/AcademicYearSelector";
+import { CalendarVersionBadge } from "@/components/shared/CalendarVersionBadge";
+import { DemoResetDialog } from "@/components/shared/DemoResetDialog";
+import { NotificationDrawer } from "@/components/shared/NotificationDrawer";
+import { RoleBadge } from "@/components/shared/RoleBadge";
+import { WorkspaceSwitcher } from "@/components/shared/WorkspaceSwitcher";
+import { roleDefinitions } from "@/lib/demo-data";
 import { useDemoState } from "@/lib/demo-state";
+import type { RoleNavigationItem, WorkspaceRole } from "@/lib/types";
 
-type RoleKey = keyof typeof navigationByRole;
-
-const roleLabels: Record<RoleKey, string> = {
-  hec: "HEC Secretariat",
-  university: "University Nodal Office",
-  workflow: "Governance Secretariat",
-  executive: "Executive Council",
+const navIcons: Record<RoleNavigationItem["icon"], typeof LayoutDashboard> = {
+  dashboard: LayoutDashboard,
+  calendar: CalendarDays,
+  compliance: ClipboardCheck,
+  institution: Building2,
+  request: FileText,
+  version: BookOpenCheck,
+  report: FileText,
+  agenda: SignpostBig,
+  decision: Gavel,
+  impact: Scale,
+  publication: ShieldCheck,
+  alert: AlertTriangle,
+  audit: FileClock,
 };
 
-const navIcons: Record<string, typeof LayoutDashboard> = {
-  Overview: LayoutDashboard,
-  Compliance: ClipboardCheck,
-  "State calendar": CalendarDays,
-  "Audit trail": FileClock,
-  "Calendar workspace": CalendarDays,
-  "Governance queue": ShieldCheck,
-  "Executive view": LayoutDashboard,
+const profiles: Record<
+  WorkspaceRole,
+  { name: string; initials: string; title: string }
+> = {
+  university: {
+    name: "Anjali Menon",
+    initials: "AM",
+    title: "University nodal officer",
+  },
+  monitoring: {
+    name: "Meera Nair",
+    initials: "MN",
+    title: "Academic monitoring officer",
+  },
+  committee: {
+    name: "Ravi Varma",
+    initials: "RV",
+    title: "Empowered committee member",
+  },
+  administrator: {
+    name: "Leela Krishnan",
+    initials: "LK",
+    title: "Calendar administrator",
+  },
+  executive: {
+    name: "Susan Joseph",
+    initials: "SJ",
+    title: "Executive viewer",
+  },
 };
 
 export function AppShell({
   role,
   children,
 }: {
-  role: RoleKey;
+  role: WorkspaceRole;
   children: ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const {
-    academicYear,
-    setAcademicYear,
-    notificationsRead,
-    setNotificationsRead,
-    toast,
-  } = useDemoState();
+  const [resetOpen, setResetOpen] = useState(false);
+  const { notificationCount, masterCalendarVersion, publicationStatus, signOut, toast } =
+    useDemoState();
+  const definition = roleDefinitions[role];
+  const profile = profiles[role];
   const crumbs = pathname
     .split("/")
     .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1));
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).replace("-", " "));
+
+  function handleSignOut() {
+    signOut();
+    setProfileOpen(false);
+    router.push("/login");
+  }
 
   const sidebar = (
     <>
       <div className="sidebar-brand">
-        <Brand compact inverse href={`/${role}/dashboard`} />
+        <Brand compact inverse href={definition.destination} />
         <button
           className="sidebar-close"
           aria-label="Close navigation"
@@ -75,13 +124,18 @@ export function AppShell({
           <X size={20} />
         </button>
       </div>
-      <div className="role-block">
+      <div className="role-block role-block-detailed">
         <span>Current workspace</span>
-        <strong>{roleLabels[role]}</strong>
+        <RoleBadge role={role} compact />
+        <small>{definition.identity}</small>
+        <CalendarVersionBadge
+          version={masterCalendarVersion}
+          status={publicationStatus}
+        />
       </div>
-      <nav className="app-nav" aria-label="Application navigation">
-        {navigationByRole[role].map((item) => {
-          const Icon = navIcons[item.label] ?? LayoutDashboard;
+      <nav className="app-nav" aria-label={`${definition.shortLabel} navigation`}>
+        {definition.navigation.map((item) => {
+          const Icon = navIcons[item.icon];
           const active = pathname === item.href;
           return (
             <Link
@@ -144,29 +198,21 @@ export function AppShell({
             </div>
           </div>
           <div className="utility-actions">
-            <label className="year-select">
-              <CalendarDays size={16} />
-              <span className="sr-only">Academic year</span>
-              <select
-                value={academicYear}
-                onChange={(event) => setAcademicYear(event.target.value)}
-              >
-                {academicYears.map((year) => (
-                  <option key={year}>{year}</option>
-                ))}
-              </select>
-            </label>
+            <WorkspaceSwitcher role={role} />
+            <AcademicYearSelector />
             <button
               className="icon-button notification-button"
-              aria-label="Open notifications"
+              aria-label={`Open notifications${notificationCount ? `, ${notificationCount} unread` : ""}`}
               aria-expanded={notificationsOpen}
               onClick={() => {
-                setNotificationsOpen((value) => !value);
+                setNotificationsOpen(true);
                 setProfileOpen(false);
               }}
             >
               <Bell size={19} />
-              {!notificationsRead ? <span className="unread-dot" /> : null}
+              {notificationCount ? (
+                <span className="notification-count">{notificationCount}</span>
+              ) : null}
             </button>
             <button
               className="profile-button"
@@ -177,70 +223,47 @@ export function AppShell({
                 setNotificationsOpen(false);
               }}
             >
-              <span className="avatar">MN</span>
+              <span className="avatar">{profile.initials}</span>
               <span className="profile-copy">
-                <strong>Meera Nair</strong>
-                <small>{roleLabels[role]}</small>
+                <strong>{profile.name}</strong>
+                <small>{profile.title}</small>
               </span>
               <ChevronDown size={15} />
             </button>
           </div>
-          {notificationsOpen ? (
-            <section className="utility-popover notifications-popover">
-              <div className="popover-title">
-                <div>
-                  <span className="eyebrow">Updates</span>
-                  <h2>Notifications</h2>
-                </div>
-                <button
-                  className="text-button"
-                  onClick={() => setNotificationsRead(true)}
-                >
-                  <CheckCheck size={15} /> Mark read
-                </button>
-              </div>
-              <div className="notification-item">
-                <span className="notification-icon">
-                  <CalendarDays size={17} />
-                </span>
-                <div>
-                  <strong>State calendar version 1.4 is live</strong>
-                  <p>Published today at 10:42 by the HEC Secretariat.</p>
-                </div>
-              </div>
-              <div className="notification-item">
-                <span className="notification-icon terracotta">
-                  <ClipboardCheck size={17} />
-                </span>
-                <div>
-                  <strong>Three submissions need review</strong>
-                  <p>One item has crossed its coordination deadline.</p>
-                </div>
-              </div>
-            </section>
-          ) : null}
           {profileOpen ? (
             <section className="utility-popover profile-popover">
               <div className="profile-popover-head">
                 <CircleUserRound size={28} />
                 <div>
-                  <strong>Dr. Meera Nair</strong>
-                  <span>State coordination officer</span>
+                  <strong>{profile.name}</strong>
+                  <span>{definition.identity}</span>
                 </div>
               </div>
+              <Link href="/login" onClick={() => setProfileOpen(false)}>
+                <UsersRound size={15} /> Switch workspace
+              </Link>
               <button
-                onClick={() =>
-                  toast("Profile preview", "Profile settings are simulated in this prototype.")
-                }
+                onClick={() => {
+                  setProfileOpen(false);
+                  setResetOpen(true);
+                }}
               >
-                Account preferences
+                <RotateCcw size={15} /> Reset demo
               </button>
-              <Link href="/login">Switch demonstration role</Link>
+              <button onClick={handleSignOut}>
+                <Landmark size={15} /> Sign out
+              </button>
             </section>
           ) : null}
         </header>
         <main className="app-content">{children}</main>
       </div>
+      <NotificationDrawer
+        open={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+      />
+      <DemoResetDialog open={resetOpen} onClose={() => setResetOpen(false)} />
     </div>
   );
 }

@@ -203,7 +203,7 @@ export function UniversityDashboard() {
   return (
     <>
       <PageHeader
-        eyebrow="Malabar Coast University · Academic Planning Office"
+        eyebrow="Sahya Higher Studies University · Academic Planning Office"
         title="Your calendar is nearly aligned"
         description="Three focused actions will prepare the institutional calendar for final ratification and statewide publication."
         actions={
@@ -345,7 +345,7 @@ const initialQueue: WorkflowItem[] = [
   {
     id: 1,
     title: "Monsoon contingency buffer",
-    institution: "Wayanad Highlands University",
+    institution: "Kuttanad Knowledge University",
     received: "Received 23 Jul",
     type: "Calendar variation",
     detail: "Requests a two-day instructional buffer during the southwest monsoon period.",
@@ -361,7 +361,7 @@ const initialQueue: WorkflowItem[] = [
   {
     id: 3,
     title: "Inter-collegiate arts festival",
-    institution: "Travancore Institute of Higher Studies",
+    institution: "Ananthapuri University of Studies",
     received: "Received 24 Jul",
     type: "Protected activity",
     detail: "Seeks a protected three-day window without reducing planned teaching days.",
@@ -386,7 +386,7 @@ export function WorkflowDashboard() {
   return (
     <>
       <PageHeader
-        eyebrow="Governance Secretariat · Review workspace"
+        eyebrow="Empowered Committee · Review workspace"
         title="Three decisions are ready for review"
         description="Move calendar variations and clarifications through a transparent, time-bound academic governance process."
         actions={
@@ -524,7 +524,7 @@ export function ExecutiveDashboard() {
   return (
     <>
       <PageHeader
-        eyebrow="Executive Council · Statewide view"
+        eyebrow="Executive Viewer · Statewide view"
         title="Academic year 2026–27 is on course"
         description="A concise view of statewide readiness, institutional alignment and the next decisions that may need executive attention."
         actions={
@@ -560,7 +560,7 @@ export function ExecutiveDashboard() {
           <StatusBadge status="attention" />
           <strong>Focused follow-up</strong>
           <p>
-            Backwater Science &amp; Arts University has three unresolved calendar dates.
+            Sahya Higher Studies University has one unauthorised examination deviation.
           </p>
           <button
             className="text-button"

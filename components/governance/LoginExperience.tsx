@@ -1,79 +1,67 @@
 "use client";
 
-import { ArrowRight, Building2, Check, Landmark, Scale, Users } from "lucide-react";
+import {
+  ArrowRight,
+  Building2,
+  CalendarRange,
+  Check,
+  GraduationCap,
+  Presentation,
+  Scale,
+  ShieldCheck,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Brand } from "@/components/brand/Brand";
+import { roleDefinitions } from "@/lib/demo-data";
+import { useDemoState } from "@/lib/demo-state";
+import type { DemoRoleId } from "@/lib/types";
 
-const roles = [
-  {
-    id: "hec",
-    label: "HEC Secretariat",
-    description: "Coordinate statewide calendars and compliance.",
-    icon: Landmark,
-    destination: "/hec/dashboard",
-  },
-  {
-    id: "university",
-    label: "University Nodal Office",
-    description: "Align an institutional calendar to the state baseline.",
-    icon: Building2,
-    destination: "/university/dashboard",
-  },
-  {
-    id: "workflow",
-    label: "Governance Secretariat",
-    description: "Review submissions, variations and approvals.",
-    icon: Scale,
-    destination: "/workflow/dashboard",
-  },
-  {
-    id: "executive",
-    label: "Executive Council",
-    description: "View concise, statewide academic readiness.",
-    icon: Users,
-    destination: "/executive/dashboard",
-  },
+const loginRoles: Array<{
+  id: DemoRoleId;
+  icon: typeof Building2;
+}> = [
+  { id: "public", icon: CalendarRange },
+  { id: "university", icon: GraduationCap },
+  { id: "monitoring", icon: Building2 },
+  { id: "committee", icon: Scale },
+  { id: "administrator", icon: ShieldCheck },
+  { id: "executive", icon: Presentation },
 ];
 
 export function LoginExperience() {
-  const [selected, setSelected] = useState(roles[0].id);
-  const [loading, setLoading] = useState(false);
+  const [loadingRole, setLoadingRole] = useState<DemoRoleId | null>(null);
+  const { selectWorkspace } = useDemoState();
   const router = useRouter();
-  const current = roles.find((role) => role.id === selected) ?? roles[0];
 
-  function enterPrototype() {
-    setLoading(true);
-    window.localStorage.setItem("vidyachakra-demo-role", selected);
-    window.setTimeout(() => router.push(current.destination), 450);
+  function enterWorkspace(role: DemoRoleId) {
+    const definition = roleDefinitions[role];
+    setLoadingRole(role);
+    selectWorkspace(role);
+    window.setTimeout(() => router.push(definition.destination), 360);
   }
 
   return (
-    <main className="login-page">
-      <section className="login-scene">
+    <main className="login-page workspace-login-page">
+      <section className="login-scene workspace-login-scene">
         <div className="login-scene-top">
           <Brand inverse />
           <span className="login-year">ACADEMIC YEAR 2026–27</span>
         </div>
-        <div className="login-message">
-          <p className="eyebrow">A shared calendar for a shared purpose</p>
-          <h1>Academic coordination, from council chamber to classroom.</h1>
+        <div className="login-message workspace-login-message">
+          <p className="eyebrow">Role-aware academic coordination</p>
+          <h1>One calendar. A clear workspace for every responsibility.</h1>
           <p>
-            Explore how each participant in Kerala&apos;s higher education
-            ecosystem sees the same academic rhythm through a purpose-built lens.
+            Enter the same statewide academic rhythm through the lens of a
+            university, monitoring officer, committee member, administrator or
+            executive stakeholder.
           </p>
           <div className="login-benefits">
-            <span>
-              <Check size={15} /> Statewide calendar baseline
-            </span>
-            <span>
-              <Check size={15} /> Transparent review workflows
-            </span>
-            <span>
-              <Check size={15} /> Actionable compliance signals
-            </span>
+            <span><Check size={15} /> No credentials required</span>
+            <span><Check size={15} /> Progress stays on this device</span>
+            <span><Check size={15} /> Switch roles at any time</span>
           </div>
         </div>
         <Image
@@ -82,48 +70,64 @@ export function LoginExperience() {
           className="login-landscape"
           width={1200}
           height={760}
+          priority
         />
       </section>
-      <section className="login-panel">
-        <Link className="login-back" href="/">
-          ← Return to public site
-        </Link>
-        <div className="login-form">
+
+      <section className="login-panel workspace-login-panel">
+        <div className="workspace-login-head">
+          <Link className="login-back" href="/calendar">
+            ← Back to the public calendar
+          </Link>
           <p className="eyebrow">Interactive demonstration</p>
           <h2>Choose your workspace</h2>
-          <p className="login-intro">
-            No account is required. Select a role to enter its simulated workspace.
+          <p>
+            Each workspace reveals the tools and decisions relevant to that role.
+            No personal information is collected.
           </p>
-          <div className="role-options">
-            {roles.map((role) => {
-              const Icon = role.icon;
-              const active = selected === role.id;
-              return (
+        </div>
+
+        <div className="workspace-role-list">
+          {loginRoles.map(({ id, icon: Icon }, index) => {
+            const role = roleDefinitions[id];
+            const loading = loadingRole === id;
+            return (
+              <article
+                className={`workspace-role-card role-card-${role.accent}`}
+                key={id}
+              >
+                <div className="workspace-role-number">
+                  {String(index + 1).padStart(2, "0")}
+                </div>
+                <span className="workspace-role-icon">
+                  <Icon size={21} aria-hidden="true" />
+                </span>
+                <div className="workspace-role-copy">
+                  <div className="workspace-role-title">
+                    <div>
+                      <h3>{role.label}</h3>
+                      <span>{role.identity}</span>
+                    </div>
+                  </div>
+                  <p>{role.description}</p>
+                  <div className="permission-summary" aria-label="Permissions">
+                    {role.permissions.map((permission) => (
+                      <span key={permission}>{permission}</span>
+                    ))}
+                  </div>
+                </div>
                 <button
-                  key={role.id}
-                  className={`role-option ${active ? "active" : ""}`}
-                  onClick={() => setSelected(role.id)}
-                  aria-pressed={active}
+                  className="workspace-enter-button"
+                  onClick={() => enterWorkspace(id)}
+                  disabled={loadingRole !== null}
+                  aria-label={`Enter Demo Workspace as ${role.label}`}
                 >
-                  <span className="role-option-icon">
-                    <Icon size={20} />
-                  </span>
-                  <span>
-                    <strong>{role.label}</strong>
-                    <small>{role.description}</small>
-                  </span>
-                  <span className="role-radio">{active ? <Check size={13} /> : null}</span>
+                  {loading ? "Opening…" : id === "public" ? "Open public calendar" : "Enter Demo Workspace"}
+                  {!loading ? <ArrowRight size={16} /> : null}
                 </button>
-              );
-            })}
-          </div>
-          <button className="button button-primary login-submit" onClick={enterPrototype}>
-            {loading ? "Preparing workspace…" : `Continue as ${current.label}`}
-            {!loading ? <ArrowRight size={17} /> : null}
-          </button>
-          <p className="login-assurance">
-            This sign-in is simulated. No personal information is collected.
-          </p>
+              </article>
+            );
+          })}
         </div>
       </section>
     </main>

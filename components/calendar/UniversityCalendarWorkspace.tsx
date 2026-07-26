@@ -25,7 +25,7 @@ const localDates = [
   },
   {
     date: "05 OCT",
-    title: "Malabar academic colloquium",
+    title: "Sahya academic colloquium",
     note: "No teaching-day impact",
     type: "local",
   },
@@ -38,7 +38,7 @@ export function UniversityCalendarWorkspace() {
   return (
     <>
       <PageHeader
-        eyebrow="Malabar Coast University · Calendar workspace"
+        eyebrow="Sahya Higher Studies University · Calendar workspace"
         title="Shape the institutional calendar"
         description="Map local academic activity against the statewide baseline and document every material variation before ratification."
         actions={
