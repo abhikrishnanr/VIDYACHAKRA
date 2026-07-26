@@ -118,7 +118,9 @@ export type UniversityCalendarSubmission = {
   universityId: string;
   academicYearId: string;
   programmeType: ProgrammeType;
+  title: string;
   version: string;
+  applicableSemesters: SemesterNumber[];
   status:
     | "draft"
     | "submitted"
@@ -131,9 +133,12 @@ export type UniversityCalendarSubmission = {
     | "university_teaching_only"
     | "selected_delivery_units";
   selectedDeliveryUnitIds: string[];
+  createdAt: string;
   submittedAt: string | null;
   reviewedAt: string | null;
   lockedAt: string | null;
+  reviewNote: string;
+  declarationAccepted: boolean;
 };
 
 export type UniversityCalendarEntry = {
@@ -161,12 +166,19 @@ export type CourseOffering = {
   universityId: string;
   deliveryUnitId: string;
   courseMasterId: string;
-  offeringStatus: "draft" | "submitted" | "verified" | "inactive";
+  offeringStatus:
+    | "draft"
+    | "submitted"
+    | "returned"
+    | "verified"
+    | "inactive";
   mode: "in_person" | "blended" | "online";
   shift: "day" | "evening" | "weekend";
   approvalReference: string;
   effectiveFrom: string;
   effectiveTo: string | null;
+  reviewNote: string;
+  lastUpdatedAt: string;
 };
 
 export type CourseBatch = {

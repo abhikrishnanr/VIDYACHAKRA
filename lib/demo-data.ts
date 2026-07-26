@@ -79,6 +79,16 @@ export const roleDefinitions: Record<DemoRoleId, DemoRoleDefinition> = {
     navigation: [
       { label: "Command Centre", href: "/hec/dashboard", icon: "dashboard" },
       { label: "Compliance Matrix", href: "/hec/compliance", icon: "compliance" },
+      {
+        label: "Calendar Submissions",
+        href: "/hec/calendar-submissions",
+        icon: "publication",
+      },
+      {
+        label: "Course Offerings",
+        href: "/hec/course-offerings",
+        icon: "course",
+      },
       { label: "Institution Registry", href: "/hec/institutions", icon: "institution" },
       {
         label: "Academic Years",

@@ -429,7 +429,7 @@ export const domainAcademicDeliveryUnits: AcademicDeliveryUnit[] = [
   ["du-sahya-humanities", "sahya", "School of Humanities", "Humanities School", "university_department", "Thrissur", "SHSU-DEPT-01", "ay-2024-25"],
   ["du-sahya-science", "sahya", "School of Science and Technology", "Science & Technology", "university_department", "Thrissur", "SHSU-DEPT-02", "ay-2024-25"],
   ["du-sahya-liberal", "sahya", "Sahya College of Liberal Studies", "Sahya Liberal", "affiliated_college", "Thrissur", "SHSU-AFF-01", "ay-2023-24"],
-  ["du-sahya-nilgiri", "sahya", "Nilgiri College of Applied Sciences", "Nilgiri CAS", "affiliated_college", "Palakkad", "SHSU-AFF-02", "ay-2024-25"],
+  ["du-sahya-nilgiri", "sahya", "Green Valley College", "Green Valley", "affiliated_college", "Palakkad", "SHSU-AFF-02", "ay-2024-25"],
   ["du-sahya-pamba", "sahya", "Pamba Institute of Commerce", "Pamba Commerce", "affiliated_college", "Pathanamthitta", "SHSU-AFF-03", "ay-2024-25"],
   ["du-anan-campus", "ananthapuri", "University Teaching Campus", "Ananthapuri Campus", "university_campus", "Thiruvananthapuram", "AUS-CAMP-01", "ay-2023-24"],
   ["du-anan-humanities", "ananthapuri", "School of Languages", "Languages School", "university_department", "Thiruvananthapuram", "AUS-DEPT-01", "ay-2023-24"],
@@ -491,6 +491,8 @@ const offeringBlueprints: OfferingBlueprint[] = [
   { id: "off-023", universityId: "periyar", deliveryUnitId: "du-periyar-centre", courseMasterId: "cm-bsc-psych" },
   { id: "off-024", universityId: "periyar", deliveryUnitId: "du-periyar-idukki", courseMasterId: "cm-bsc-physics" },
   { id: "off-025", universityId: "kuttanad", deliveryUnitId: "du-kuttanad-env", courseMasterId: "cm-bsc-chem", status: "draft" },
+  { id: "off-026", universityId: "sahya", deliveryUnitId: "du-sahya-campus", courseMasterId: "cm-bsc-physics", status: "submitted" },
+  { id: "off-027", universityId: "ananthapuri", deliveryUnitId: "du-anan-sciences", courseMasterId: "cm-bsc-cs" },
 ];
 
 export const domainCourseOfferings: CourseOffering[] = offeringBlueprints.map(
@@ -503,9 +505,17 @@ export const domainCourseOfferings: CourseOffering[] = offeringBlueprints.map(
     offeringStatus: offering.status ?? "verified",
     mode: index === 21 ? "blended" : "in_person",
     shift: offering.shift ?? "day",
-    approvalReference: `HEC/OFFER/2026/${String(index + 1).padStart(3, "0")}`,
+    approvalReference:
+      offering.id === "off-009" || offering.id === "off-025"
+        ? ""
+        : `HEC/OFFER/2026/${String(index + 1).padStart(3, "0")}`,
     effectiveFrom: "2026-06-01",
     effectiveTo: null,
+    reviewNote:
+      offering.id === "off-009"
+        ? "Approval reference must be supplied before HEC verification."
+        : "",
+    lastUpdatedAt: "2026-07-26T12:30:00.000Z",
   }),
 );
 
@@ -514,7 +524,7 @@ const capacityByOffering: Record<string, number[]> = {
   "off-002": [40],
   "off-003": [40],
   "off-004": [48],
-  "off-005": [36, 36],
+  "off-005": [40, 40],
   "off-006": [30],
   "off-007": [60],
   "off-008": [40],
@@ -535,6 +545,8 @@ const capacityByOffering: Record<string, number[]> = {
   "off-023": [30, 30],
   "off-024": [24],
   "off-025": [30],
+  "off-026": [30],
+  "off-027": [50],
 };
 
 export const domainCourseBatches: CourseBatch[] = domainCourseOfferings.flatMap(
@@ -552,7 +564,8 @@ export const domainCourseBatches: CourseBatch[] = domainCourseOfferings.flatMap(
 );
 
 const semesterCycle: SemesterNumber[] = [
-  1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1,
+  1, 2, 3, 4, 1, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1,
+  1, 1,
 ];
 
 function admissionYearForSemester(semesterNumber: SemesterNumber) {
@@ -647,22 +660,30 @@ export const domainCalendarSubmissions: UniversityCalendarSubmission[] = [
   universityId: universityId as string,
   academicYearId: "ay-2026-27",
   programmeType: "FYUGP",
+  title: "FYUGP Annual Academic Calendar 2026–27",
   version: version as string,
+  applicableSemesters: [1, 3],
   status: status as UniversityCalendarSubmission["status"],
   scopeType: scopeType as UniversityCalendarSubmission["scopeType"],
   selectedDeliveryUnitIds:
     scopeType === "selected_delivery_units"
       ? ["du-periyar-centre", "du-periyar-idukki"]
       : [],
+  createdAt: "2026-07-14T09:15:00.000Z",
   submittedAt: "2026-07-18T10:00:00.000Z",
   reviewedAt:
     status === "accepted" || status === "locked"
       ? "2026-07-21T15:30:00.000Z"
       : null,
   lockedAt: status === "locked" ? "2026-07-22T09:00:00.000Z" : null,
+  reviewNote:
+    status === "locked"
+      ? "Accepted against the published FYUGP milestone definitions and locked for implementation."
+      : "",
+  declarationAccepted: true,
 }));
 
-const baselineDates: Record<
+export const domainCalendarBaselineDates: Record<
   string,
   { start: string; end: string | null }
 > = {
@@ -688,7 +709,7 @@ const baselineDates: Record<
 export const domainCalendarEntries: UniversityCalendarEntry[] =
   domainCalendarSubmissions.flatMap((submission) =>
     domainCalendarMilestones.map((milestone) => {
-      const baseline = baselineDates[milestone.id];
+      const baseline = domainCalendarBaselineDates[milestone.id];
       const sahyaTheory =
         submission.universityId === "sahya" && milestone.id === "cmd-theory";
       return {

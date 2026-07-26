@@ -40,7 +40,13 @@ const downstreamOptions = [
 ];
 
 export function ChangeRequestWizard() {
-  const { requestStatus, submitChangeRequest, toast } = useDemoState();
+  const {
+    requestStatus,
+    submitChangeRequest,
+    toast,
+    universityCalendarEntries,
+    universityCalendarSubmissions,
+  } = useDemoState();
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
   const [eventId, setEventId] = useState("semester-1-theory-examination");
@@ -54,6 +60,16 @@ export function ChangeRequestWizard() {
     "Consolidated college impact note.pdf",
   ]);
   const [declaration, setDeclaration] = useState(false);
+  const theoryEntry = universityCalendarEntries.find(
+    (entry) =>
+      entry.changeRequestId === "CR-2026-014" &&
+      entry.milestoneDefinitionId === "cmd-theory",
+  );
+  const lockedSubmission = universityCalendarSubmissions.find(
+    (submission) =>
+      submission.id === theoryEntry?.submissionId &&
+      submission.status === "locked",
+  );
 
   function toggleDownstream(item: string) {
     setDownstream((current) =>
@@ -180,7 +196,16 @@ export function ChangeRequestWizard() {
               </label>
               <div className="uni-selected-event">
                 <div><span className="uni-event-type examination">Examination</span><h3>Semester 1 Theory Examination</h3><p>Four Year Undergraduate Programme (FYUGP) · Semester 1</p></div>
-                <div><small>Official Council date</small><strong><LockKeyhole size={15} /> 05 Dec 2026</strong><span>Version 1.0 · Locked</span></div>
+                <div>
+                  <small>Official Council date</small>
+                  <strong><LockKeyhole size={15} /> 05 Dec 2026</strong>
+                  <span>Version 1.0 · Locked UniversityCalendarEntry</span>
+                  {lockedSubmission ? (
+                    <Link href={`/university/calendar-submissions/${lockedSubmission.id}`}>
+                      Open locked calendar record
+                    </Link>
+                  ) : null}
+                </div>
               </div>
             </>
           ) : null}

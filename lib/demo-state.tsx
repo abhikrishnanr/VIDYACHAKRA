@@ -16,7 +16,9 @@ import type {
   CalendarMilestoneDefinition,
   CommitteeDecision,
   CompletionReport,
+  CourseBatch,
   CourseMaster,
+  CourseOffering,
   DemoRoleId,
   DemoSessionState,
   HecRecommendation,
@@ -24,13 +26,16 @@ import type {
   RequestStatus,
   RevisionPublicationState,
   Semester,
+  UniversityCalendarEntry,
+  UniversityCalendarSubmission,
   UniversityOperatingModel,
 } from "./types";
 import { defaultDomainState } from "./domain-data";
+import { findDuplicateOffering } from "./course-offerings";
 
 type Toast = { id: number; title: string; message: string };
 
-export const DEMO_STATE_VERSION = 6;
+export const DEMO_STATE_VERSION = 8;
 
 export const initialDemoState: DemoSessionState = {
   demoStateVersion: DEMO_STATE_VERSION,
@@ -85,6 +90,35 @@ type DemoStateContextValue = DemoSessionState & {
   setUniversityOperatingModel: (
     universityId: string,
     operatingModel: UniversityOperatingModel,
+  ) => boolean;
+  saveCourseOffering: (
+    record: CourseOffering,
+    batches: CourseBatch[],
+  ) => boolean;
+  submitCourseOffering: (id: string) => boolean;
+  reviewCourseOffering: (
+    id: string,
+    action: "verify" | "return" | "note",
+    note: string,
+  ) => boolean;
+  copyCourseOfferingToNextYear: (id: string) => string | null;
+  requestVerifiedCapacityChange: (id: string, reason: string) => boolean;
+  saveUniversityCalendarSubmission: (
+    record: UniversityCalendarSubmission,
+    entries: UniversityCalendarEntry[],
+  ) => boolean;
+  submitUniversityCalendarSubmission: (
+    id: string,
+    draft?: {
+      record: UniversityCalendarSubmission;
+      entries: UniversityCalendarEntry[];
+    },
+  ) => boolean;
+  addUniversityCalendarReviewNote: (id: string, note: string) => boolean;
+  reviewUniversityCalendarSubmission: (
+    id: string,
+    decision: "lock" | "return",
+    note: string,
   ) => boolean;
   setSelectedProgramme: (programme: Programme) => void;
   setSelectedSemester: (semester: Semester) => void;
@@ -190,6 +224,86 @@ function migrateDemoState(stored: Partial<DemoSessionState>): DemoSessionState {
       })),
       ...storedUnits.filter((unit) => !defaultIds.has(unit.id)),
     ];
+    const defaultOfferings = new Map(
+      initialDemoState.courseOfferings.map((item) => [item.id, item]),
+    );
+    migrated.courseOfferings = migrated.courseOfferings.map((item) => {
+      const fallback = defaultOfferings.get(item.id);
+      return {
+        ...fallback,
+        ...item,
+        reviewNote: item.reviewNote ?? fallback?.reviewNote ?? "",
+        lastUpdatedAt:
+          item.lastUpdatedAt ??
+          fallback?.lastUpdatedAt ??
+          "2026-07-26T12:30:00.000Z",
+      };
+    });
+    migrated.courseBatches = migrated.courseBatches.map((batch) =>
+      batch.courseOfferingId === "off-005"
+        ? { ...batch, sanctionedCapacity: 40 }
+        : batch,
+    );
+    const migratedBatchCapacity = new Map(
+      migrated.courseBatches.map((batch) => [
+        batch.id,
+        batch.sanctionedCapacity,
+      ]),
+    );
+    migrated.semesterStrengthSnapshots =
+      migrated.semesterStrengthSnapshots.map((snapshot) => ({
+        ...snapshot,
+        sanctionedCapacity:
+          migratedBatchCapacity.get(snapshot.courseBatchId) ??
+          snapshot.sanctionedCapacity,
+        ...(snapshot.courseBatchId.startsWith("batch-off-005-")
+          ? {
+              semesterNumber: 1 as const,
+              admissionIntake: snapshot.currentStrength,
+            }
+          : {}),
+      }));
+    migrated.studentCohorts = migrated.studentCohorts.map((cohort) =>
+      cohort.courseOfferingId === "off-005"
+        ? {
+            ...cohort,
+            admissionAcademicYearId: "ay-2026-27",
+            cohortLabel: "2026-27 Admission Cohort",
+            admissionStatus: "in_progress",
+          }
+        : cohort,
+    );
+    const defaultSubmissions = new Map(
+      initialDemoState.universityCalendarSubmissions.map((item) => [
+        item.id,
+        item,
+      ]),
+    );
+    migrated.universityCalendarSubmissions =
+      migrated.universityCalendarSubmissions.map((item) => {
+        const fallback = defaultSubmissions.get(item.id);
+        return {
+          ...fallback,
+          ...item,
+          title:
+            item.title ??
+            fallback?.title ??
+            "Structured University Academic Calendar",
+          applicableSemesters:
+            item.applicableSemesters?.length
+              ? item.applicableSemesters
+              : (fallback?.applicableSemesters ?? [1, 3]),
+          createdAt:
+            item.createdAt ??
+            fallback?.createdAt ??
+            "2026-07-14T09:15:00.000Z",
+          reviewNote: item.reviewNote ?? fallback?.reviewNote ?? "",
+          declarationAccepted:
+            item.declarationAccepted ??
+            fallback?.declarationAccepted ??
+            false,
+        };
+      });
   }
 
   return migrated;
@@ -690,6 +804,740 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
     [commit, session.activeRole, session.universityProfiles, toast],
   );
 
+  const saveCourseOffering = useCallback(
+    (record: CourseOffering, batches: CourseBatch[]) => {
+      if (session.activeRole !== "university") {
+        toast(
+          "University action required",
+          "Course offerings are maintained from the university workspace.",
+        );
+        return false;
+      }
+      const course = session.courseMasters.find(
+        (item) => item.id === record.courseMasterId && item.active,
+      );
+      const unit = session.academicDeliveryUnits.find(
+        (item) =>
+          item.id === record.deliveryUnitId &&
+          item.universityId === record.universityId &&
+          item.active,
+      );
+      if (!course || !unit) {
+        toast(
+          "Official selections required",
+          "Choose an active HEC Course Master record and an active academic delivery unit.",
+        );
+        return false;
+      }
+      if (findDuplicateOffering(record, session.courseOfferings)) {
+        toast(
+          "Duplicate offering blocked",
+          "This academic year, delivery unit, course, mode and shift combination already exists.",
+        );
+        return false;
+      }
+      if (
+        !batches.length ||
+        batches.some(
+          (batch) =>
+            !batch.batchLabel.trim() ||
+            !Number.isFinite(batch.sanctionedCapacity) ||
+            batch.sanctionedCapacity <= 0,
+        )
+      ) {
+        toast(
+          "Approved batch details required",
+          "Add at least one named batch with a positive sanctioned capacity.",
+        );
+        return false;
+      }
+      const existing = session.courseOfferings.find(
+        (item) => item.id === record.id,
+      );
+      if (existing?.offeringStatus === "verified") {
+        toast(
+          "Verified capacity is protected",
+          "Record a capacity-change reason for HEC instead of editing verified batches directly.",
+        );
+        return false;
+      }
+      const now = new Date().toISOString();
+      const savedRecord = { ...record, lastUpdatedAt: now };
+      commit((current) => ({
+        ...current,
+        courseOfferings: existing
+          ? current.courseOfferings.map((item) =>
+              item.id === record.id ? savedRecord : item,
+            )
+          : [savedRecord, ...current.courseOfferings],
+        courseBatches: [
+          ...current.courseBatches.filter(
+            (batch) => batch.courseOfferingId !== record.id,
+          ),
+          ...batches.map((batch) => ({
+            ...batch,
+            courseOfferingId: record.id,
+            sanctionedCapacity: Math.round(batch.sanctionedCapacity),
+          })),
+        ],
+        studentCohorts: current.studentCohorts.some(
+          (cohort) => cohort.courseOfferingId === record.id,
+        )
+          ? current.studentCohorts
+          : [
+              {
+                id: `cohort-${record.id}`,
+                courseOfferingId: record.id,
+                admissionAcademicYearId: record.academicYearId,
+                cohortLabel: `${record.academicYearId.replace("ay-", "")} Admission Cohort`,
+                admissionStatus: "not_started",
+                lastUpdatedAt: null,
+              },
+              ...current.studentCohorts,
+            ],
+        demoAuditEntries: [
+          {
+            id: `course-offering-saved-${Date.now()}`,
+            action: existing
+              ? "Course offering draft updated"
+              : "Course offering created",
+            actor: "Prof. Anjali Menon",
+            actorRole: "University Academic Administrator",
+            scope: `${unit.name} · ${course.courseName}`,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail: `${batches.length} approved batch${batches.length === 1 ? "" : "es"} · ${batches.reduce((total, batch) => total + Math.round(batch.sanctionedCapacity), 0)} sanctioned seats.`,
+            previousValue: existing?.offeringStatus ?? "No offering",
+            newValue: savedRecord.offeringStatus,
+            workflowStage: "University Course Offering",
+            reference: record.id,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        existing ? "Offering draft updated" : "Course offering created",
+        `${course.courseName} is bound to ${unit.name} with capacity calculated from its batches.`,
+      );
+      return true;
+    },
+    [
+      commit,
+      session.academicDeliveryUnits,
+      session.activeRole,
+      session.courseMasters,
+      session.courseOfferings,
+      toast,
+    ],
+  );
+
+  const submitCourseOffering = useCallback(
+    (id: string) => {
+      if (session.activeRole !== "university") {
+        toast(
+          "University action required",
+          "Only the university workspace can submit an offering for HEC verification.",
+        );
+        return false;
+      }
+      const offering = session.courseOfferings.find((item) => item.id === id);
+      if (
+        !offering ||
+        !["draft", "returned"].includes(offering.offeringStatus)
+      ) {
+        return false;
+      }
+      const now = new Date().toISOString();
+      commit((current) => ({
+        ...current,
+        courseOfferings: current.courseOfferings.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                offeringStatus: "submitted",
+                reviewNote: "",
+                lastUpdatedAt: now,
+              }
+            : item,
+        ),
+        notificationCount: Math.max(current.notificationCount + 1, 4),
+        demoAuditEntries: [
+          {
+            id: `course-offering-submitted-${Date.now()}`,
+            action: "Course offering submitted to HEC",
+            actor: "Prof. Anjali Menon",
+            actorRole: "University Academic Administrator",
+            scope: id,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail:
+              "Academic context, approval reference and batch-level sanctioned capacity submitted for verification.",
+            previousValue: offering.offeringStatus,
+            newValue: "Submitted",
+            workflowStage: "HEC Course Offering Verification",
+            reference: id,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        "Offering submitted",
+        "The course offering is now waiting for HEC verification.",
+      );
+      return true;
+    },
+    [commit, session.activeRole, session.courseOfferings, toast],
+  );
+
+  const reviewCourseOffering = useCallback(
+    (
+      id: string,
+      action: "verify" | "return" | "note",
+      note: string,
+    ) => {
+      if (session.activeRole !== "monitoring") {
+        toast(
+          "HEC verification action required",
+          "Use the HEC Academic Monitoring Officer workspace to review offerings.",
+        );
+        return false;
+      }
+      const offering = session.courseOfferings.find((item) => item.id === id);
+      if (!offering) return false;
+      if (action === "verify" && !offering.approvalReference.trim()) {
+        toast(
+          "Approval reference missing",
+          "Return the offering for correction or add a note before verification.",
+        );
+        return false;
+      }
+      if (
+        action === "verify" &&
+        offering.offeringStatus !== "submitted"
+      ) {
+        toast(
+          "Submission required",
+          "Only a university-submitted offering can be verified by HEC.",
+        );
+        return false;
+      }
+      if (
+        action === "return" &&
+        offering.offeringStatus !== "submitted"
+      ) {
+        toast(
+          "Submission required",
+          "Only a submitted offering can be returned for correction.",
+        );
+        return false;
+      }
+      if ((action === "return" || action === "note") && !note.trim()) {
+        toast(
+          "HEC note required",
+          "Add a clear verification or correction note.",
+        );
+        return false;
+      }
+      const nextStatus =
+        action === "verify"
+          ? ("verified" as const)
+          : action === "return"
+            ? ("returned" as const)
+            : offering.offeringStatus;
+      const now = new Date().toISOString();
+      commit((current) => ({
+        ...current,
+        courseOfferings: current.courseOfferings.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                offeringStatus: nextStatus,
+                reviewNote:
+                  note.trim() ||
+                  "HEC verified the approval reference and sanctioned batch capacity.",
+                lastUpdatedAt: now,
+              }
+            : item,
+        ),
+        notificationCount: Math.max(current.notificationCount + 1, 4),
+        demoAuditEntries: [
+          {
+            id: `course-offering-review-${Date.now()}`,
+            action:
+              action === "verify"
+                ? "Course offering verified"
+                : action === "return"
+                  ? "Course offering returned for correction"
+                  : "HEC verification note added",
+            actor: "Meera Nair",
+            actorRole: "HEC Academic Monitoring Officer",
+            scope: id,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail:
+              note.trim() ||
+              "Approval reference and batch-level sanctioned capacity verified.",
+            previousValue: offering.offeringStatus,
+            newValue: nextStatus,
+            workflowStage: "HEC Course Offering Verification",
+            reference: id,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        action === "verify"
+          ? "Offering verified"
+          : action === "return"
+            ? "Offering returned"
+            : "HEC note recorded",
+        action === "verify"
+          ? "The sanctioned batch capacity is now protected."
+          : "The review record has been updated.",
+      );
+      return true;
+    },
+    [commit, session.activeRole, session.courseOfferings, toast],
+  );
+
+  const copyCourseOfferingToNextYear = useCallback(
+    (id: string) => {
+      if (session.activeRole !== "university") {
+        toast(
+          "University action required",
+          "Offerings can be copied from the university workspace.",
+        );
+        return null;
+      }
+      const source = session.courseOfferings.find((item) => item.id === id);
+      if (!source) return null;
+      const orderedYears = [...session.academicYears].sort((a, b) =>
+        a.startDate.localeCompare(b.startDate),
+      );
+      const currentIndex = orderedYears.findIndex(
+        (year) => year.id === source.academicYearId,
+      );
+      const nextYear = orderedYears[currentIndex + 1];
+      if (!nextYear) {
+        toast(
+          "No later academic year",
+          "Create the next academic year in HEC master data before copying.",
+        );
+        return null;
+      }
+      const idSuffix = globalThis.crypto?.randomUUID?.() ?? Date.now();
+      const newId = `off-copy-${idSuffix}`;
+      const candidate: CourseOffering = {
+        ...source,
+        id: newId,
+        academicYearId: nextYear.id,
+        offeringStatus: "draft",
+        approvalReference: "",
+        effectiveFrom: nextYear.startDate,
+        effectiveTo: null,
+        reviewNote: "",
+        lastUpdatedAt: new Date().toISOString(),
+      };
+      if (findDuplicateOffering(candidate, session.courseOfferings)) {
+        toast(
+          "Next-year offering already exists",
+          "Open the existing draft instead of creating a duplicate.",
+        );
+        return null;
+      }
+      const sourceBatches = session.courseBatches.filter(
+        (batch) => batch.courseOfferingId === id,
+      );
+      commit((current) => ({
+        ...current,
+        courseOfferings: [candidate, ...current.courseOfferings],
+        courseBatches: [
+          ...sourceBatches.map((batch, index) => ({
+            ...batch,
+            id: `batch-${newId}-${index + 1}`,
+            courseOfferingId: newId,
+          })),
+          ...current.courseBatches,
+        ],
+        studentCohorts: [
+          {
+            id: `cohort-${newId}`,
+            courseOfferingId: newId,
+            admissionAcademicYearId: nextYear.id,
+            cohortLabel: `${nextYear.label} Admission Cohort`,
+            admissionStatus: "not_started",
+            lastUpdatedAt: null,
+          },
+          ...current.studentCohorts,
+        ],
+        demoAuditEntries: [
+          {
+            id: `course-offering-copied-${Date.now()}`,
+            action: "Course offering copied to next academic year",
+            actor: "Prof. Anjali Menon",
+            actorRole: "University Academic Administrator",
+            scope: newId,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail: `${sourceBatches.length} batch capacities copied to ${nextYear.label}; approval reference requires reconfirmation.`,
+            previousValue: `${source.academicYearId} · ${source.offeringStatus}`,
+            newValue: `${nextYear.id} · draft`,
+            workflowStage: "University Course Offering",
+            reference: newId,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        "Offering copied",
+        `${nextYear.label} now has a draft with the previous batch capacities.`,
+      );
+      return newId;
+    },
+    [
+      commit,
+      session.academicYears,
+      session.activeRole,
+      session.courseBatches,
+      session.courseOfferings,
+      toast,
+    ],
+  );
+
+  const requestVerifiedCapacityChange = useCallback(
+    (id: string, reason: string) => {
+      if (session.activeRole !== "university" || !reason.trim()) {
+        toast(
+          "Capacity-change reason required",
+          "Explain why the verified sanctioned capacity needs reconsideration.",
+        );
+        return false;
+      }
+      const offering = session.courseOfferings.find((item) => item.id === id);
+      if (!offering || offering.offeringStatus !== "verified") return false;
+      commit((current) => ({
+        ...current,
+        demoAuditEntries: [
+          {
+            id: `capacity-change-request-${Date.now()}`,
+            action: "Verified capacity change reason recorded",
+            actor: "Prof. Anjali Menon",
+            actorRole: "University Academic Administrator",
+            scope: id,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail: reason.trim(),
+            previousValue: "HEC verified sanctioned capacity",
+            newValue: "Capacity reconsideration note awaiting HEC",
+            workflowStage: "Course Offering Capacity Control",
+            reference: id,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        "Capacity reason recorded",
+        "The verified capacity remains unchanged until HEC reviews the note.",
+      );
+      return true;
+    },
+    [commit, session.activeRole, session.courseOfferings, toast],
+  );
+
+  const saveUniversityCalendarSubmission = useCallback(
+    (
+      record: UniversityCalendarSubmission,
+      entries: UniversityCalendarEntry[],
+    ) => {
+      if (session.activeRole !== "university") {
+        toast(
+          "University action required",
+          "Calendar drafts are maintained from the university workspace.",
+        );
+        return false;
+      }
+      const existing = session.universityCalendarSubmissions.find(
+        (item) => item.id === record.id,
+      );
+      if (existing?.status === "locked") {
+        toast(
+          "Calendar is locked",
+          "Published dates cannot be edited directly. Use the formal change-request workflow.",
+        );
+        return false;
+      }
+      commit((current) => ({
+        ...current,
+        universityCalendarSubmissions: existing
+          ? current.universityCalendarSubmissions.map((item) =>
+              item.id === record.id ? record : item,
+            )
+          : [record, ...current.universityCalendarSubmissions],
+        universityCalendarEntries: [
+          ...current.universityCalendarEntries.filter(
+            (entry) => entry.submissionId !== record.id,
+          ),
+          ...entries,
+        ],
+        demoAuditEntries: [
+          {
+            id: `calendar-submission-saved-${Date.now()}`,
+            action: existing
+              ? "Structured calendar draft updated"
+              : "Structured calendar draft created",
+            actor: "Prof. Anjali Menon",
+            actorRole: "University Nodal Officer",
+            scope: record.title,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail: `${entries.length} milestone records saved as structured calendar data. Supporting documents remain references only.`,
+            previousValue: existing ? existing.status : "No submission",
+            newValue: record.status,
+            workflowStage: "University Calendar Submission",
+            reference: record.id,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        existing ? "Draft updated" : "Draft created",
+        "The structured dates and scope have been saved locally.",
+      );
+      return true;
+    },
+    [
+      commit,
+      session.activeRole,
+      session.universityCalendarSubmissions,
+      toast,
+    ],
+  );
+
+  const submitUniversityCalendarSubmission = useCallback(
+    (
+      id: string,
+      draft?: {
+        record: UniversityCalendarSubmission;
+        entries: UniversityCalendarEntry[];
+      },
+    ) => {
+      if (session.activeRole !== "university") {
+        toast(
+          "University action required",
+          "Only the university workspace can submit an institutional calendar.",
+        );
+        return false;
+      }
+      const submission =
+        draft?.record ??
+        session.universityCalendarSubmissions.find((item) => item.id === id);
+      if (!submission || submission.status === "locked") return false;
+      const entries =
+        draft?.entries ??
+        session.universityCalendarEntries.filter(
+          (entry) => entry.submissionId === id,
+        );
+      const incomplete = entries.some(
+        (entry) =>
+          !entry.universityStartDate ||
+          (entry.ragStatus === "red" && !entry.deviationReason.trim()),
+      );
+      if (incomplete || !submission.declarationAccepted) {
+        toast(
+          "Submission needs attention",
+          "Complete every required date, explain each unauthorised difference and accept the declaration.",
+        );
+        return false;
+      }
+      commit((current) => ({
+        ...current,
+        universityCalendarSubmissions: current.universityCalendarSubmissions.some(
+          (item) => item.id === id,
+        )
+          ? current.universityCalendarSubmissions.map((item) =>
+              item.id === id
+                ? {
+                    ...submission,
+                    status: "submitted",
+                    submittedAt: new Date().toISOString(),
+                    reviewNote: "",
+                  }
+                : item,
+            )
+          : [
+              {
+                ...submission,
+                status: "submitted",
+                submittedAt: new Date().toISOString(),
+                reviewNote: "",
+              },
+              ...current.universityCalendarSubmissions,
+            ],
+        universityCalendarEntries: draft
+          ? [
+              ...current.universityCalendarEntries.filter(
+                (entry) => entry.submissionId !== id,
+              ),
+              ...entries,
+            ]
+          : current.universityCalendarEntries,
+        notificationCount: Math.max(current.notificationCount + 1, 4),
+        demoAuditEntries: [
+          {
+            id: `calendar-submission-submitted-${Date.now()}`,
+            action: "Annual academic calendar submitted",
+            actor: "Prof. Anjali Menon",
+            actorRole: "University Nodal Officer",
+            scope: submission.title,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail:
+              "Structured milestone dates, scope, deviations and declaration submitted to HEC for review.",
+            previousValue: submission.status,
+            newValue: "Submitted to HEC",
+            workflowStage: "Calendar Submission Review",
+            reference: id,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        "Calendar submitted to HEC",
+        "The structured annual calendar is now in the HEC review queue.",
+      );
+      return true;
+    },
+    [
+      commit,
+      session.activeRole,
+      session.universityCalendarEntries,
+      session.universityCalendarSubmissions,
+      toast,
+    ],
+  );
+
+  const reviewUniversityCalendarSubmission = useCallback(
+    (id: string, decision: "lock" | "return", note: string) => {
+      if (session.activeRole !== "monitoring") {
+        toast(
+          "HEC review action required",
+          "Calendar acceptance is available to the HEC Academic Monitoring Officer.",
+        );
+        return false;
+      }
+      const submission = session.universityCalendarSubmissions.find(
+        (item) => item.id === id,
+      );
+      if (!submission || !["submitted", "under_review"].includes(submission.status)) {
+        toast(
+          "Submission is not reviewable",
+          "Only submitted calendars can be accepted or returned.",
+        );
+        return false;
+      }
+      const now = new Date().toISOString();
+      commit((current) => ({
+        ...current,
+        universityCalendarSubmissions:
+          current.universityCalendarSubmissions.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  status: decision === "lock" ? "locked" : "returned",
+                  reviewedAt: now,
+                  lockedAt: decision === "lock" ? now : null,
+                  reviewNote: note.trim(),
+                }
+              : item,
+          ),
+        notificationCount: Math.max(current.notificationCount + 1, 5),
+        demoAuditEntries: [
+          {
+            id: `calendar-submission-review-${Date.now()}`,
+            action:
+              decision === "lock"
+                ? "University calendar accepted and locked"
+                : "University calendar returned for correction",
+            actor: "Meera Nair",
+            actorRole: "HEC Academic Monitoring Officer",
+            scope: submission.title,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail:
+              note.trim() ||
+              (decision === "lock"
+                ? "The structured calendar was accepted against the HEC baseline and locked for implementation."
+                : "Correction is required before the calendar can be accepted."),
+            previousValue: submission.status,
+            newValue: decision === "lock" ? "Locked" : "Returned",
+            workflowStage: "HEC Calendar Review",
+            reference: id,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        decision === "lock" ? "Calendar accepted and locked" : "Calendar returned",
+        decision === "lock"
+          ? "Direct date editing is disabled; future revisions require formal change control."
+          : "The university can now correct and resubmit the structured calendar.",
+      );
+      return true;
+    },
+    [
+      commit,
+      session.activeRole,
+      session.universityCalendarSubmissions,
+      toast,
+    ],
+  );
+
+  const addUniversityCalendarReviewNote = useCallback(
+    (id: string, note: string) => {
+      if (session.activeRole !== "monitoring" || !note.trim()) {
+        toast(
+          "Review note required",
+          "Enter a note from the HEC Academic Monitoring Officer.",
+        );
+        return false;
+      }
+      const submission = session.universityCalendarSubmissions.find(
+        (item) => item.id === id,
+      );
+      if (!submission || !["submitted", "under_review"].includes(submission.status)) {
+        return false;
+      }
+      commit((current) => ({
+        ...current,
+        universityCalendarSubmissions:
+          current.universityCalendarSubmissions.map((item) =>
+            item.id === id
+              ? { ...item, status: "under_review", reviewNote: note.trim() }
+              : item,
+          ),
+        demoAuditEntries: [
+          {
+            id: `calendar-review-note-${Date.now()}`,
+            action: "Calendar review note added",
+            actor: "Meera Nair",
+            actorRole: "HEC Academic Monitoring Officer",
+            scope: submission.title,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail: note.trim(),
+            previousValue: submission.reviewNote || "No review note",
+            newValue: "Review note recorded",
+            workflowStage: "Under HEC Review",
+            reference: id,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        "Review note recorded",
+        "The note is visible in the submission review record.",
+      );
+      return true;
+    },
+    [
+      commit,
+      session.activeRole,
+      session.universityCalendarSubmissions,
+      toast,
+    ],
+  );
+
   const setSelectedProgramme = useCallback(
     (selectedProgramme: Programme) => {
       commit((current) => ({ ...current, selectedProgramme }));
@@ -835,6 +1683,18 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
         committeeMeetingNote,
         requestStatus,
         revisionPublicationState: approved ? "ready" : "not-started",
+        universityCalendarEntries: current.universityCalendarEntries.map(
+          (entry) =>
+            entry.changeRequestId === "CR-2026-014"
+              ? {
+                  ...entry,
+                  ragStatus: approved ? ("amber" as const) : ("red" as const),
+                  ragReason: approved
+                    ? "Committee-approved exception awaiting publication in the official calendar."
+                    : "The proposed date remains an unauthorised deviation.",
+                }
+              : entry,
+        ),
         notificationCount: Math.max(current.notificationCount + 1, 6),
         demoAuditEntries: [
           {
@@ -1000,6 +1860,18 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       publicationSchedule: "",
       institutionsNotified: true,
       publicCalendarUpdated: true,
+      universityCalendarEntries: current.universityCalendarEntries.map(
+        (entry) =>
+          entry.changeRequestId === "CR-2026-014"
+            ? {
+                ...entry,
+                ragStatus: "green" as const,
+                ragReason:
+                  "Aligned through an approved institution-specific exception published in Calendar Version 1.1.",
+                evidenceStatus: "verified" as const,
+              }
+            : entry,
+      ),
       notificationCount: Math.max(current.notificationCount + 3, 8),
       demoAuditEntries: [
         {
@@ -1116,6 +1988,17 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       publicationSchedule: "",
       institutionsNotified: false,
       publicCalendarUpdated: false,
+      universityCalendarEntries: current.universityCalendarEntries.map(
+        (entry) =>
+          entry.changeRequestId === "CR-2026-014"
+            ? {
+                ...entry,
+                ragStatus: "amber" as const,
+                ragReason:
+                  "Formal change request submitted and awaiting HEC scrutiny.",
+              }
+            : entry,
+      ),
       notificationCount: Math.max(current.notificationCount + 1, 4),
       demoAuditEntries: [
         {
@@ -1187,6 +2070,15 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       setCourseMasterActive,
       saveAcademicDeliveryUnit,
       setUniversityOperatingModel,
+      saveCourseOffering,
+      submitCourseOffering,
+      reviewCourseOffering,
+      copyCourseOfferingToNextYear,
+      requestVerifiedCapacityChange,
+      saveUniversityCalendarSubmission,
+      submitUniversityCalendarSubmission,
+      addUniversityCalendarReviewNote,
+      reviewUniversityCalendarSubmission,
       setSelectedProgramme,
       setSelectedSemester,
       setRequestStatus,
@@ -1222,6 +2114,15 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       setCourseMasterActive,
       saveAcademicDeliveryUnit,
       setUniversityOperatingModel,
+      saveCourseOffering,
+      submitCourseOffering,
+      reviewCourseOffering,
+      copyCourseOfferingToNextYear,
+      requestVerifiedCapacityChange,
+      saveUniversityCalendarSubmission,
+      submitUniversityCalendarSubmission,
+      addUniversityCalendarReviewNote,
+      reviewUniversityCalendarSubmission,
       setSelectedProgramme,
       setSelectedSemester,
       setRequestStatus,
