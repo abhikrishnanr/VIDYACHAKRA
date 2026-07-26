@@ -30,5 +30,7 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  // The Cloudflare worker is bundled by Vinext. Native Next.js builds only
+  // type-check the application surface and use Vercel's own runtime.
+  "exclude": ["node_modules", "worker/**"]
 }
