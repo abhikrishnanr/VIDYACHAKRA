@@ -1,5 +1,5 @@
-import { RoleSectionView } from "@/components/governance/RoleSectionView";
+import { ChangeRequestList } from "@/components/university/ChangeRequestList";
 
 export default function UniversityRequestsPage() {
-  return <RoleSectionView role="university" mode="requests" />;
+  return <ChangeRequestList />;
 }

@@ -27,6 +27,23 @@ export type CommitteeDecision = "pending" | "approved" | "returned" | "rejected"
 export type RevisionPublicationState = "not-started" | "ready" | "published";
 export type RagStatus = "green" | "amber" | "red" | "grey";
 
+export type CompletionReport = {
+  actualDate: string;
+  remarks: string;
+  evidenceType: string;
+  attachmentName: string;
+  submittedAt: string;
+};
+
+export type DemoAuditRecord = {
+  id: string;
+  action: string;
+  actor: string;
+  scope: string;
+  timestamp: string;
+  detail: string;
+};
+
 export type EventType =
   | "publication"
   | "admission"
@@ -49,6 +66,8 @@ export type DemoSessionState = {
   publicationStatus: PublicationStatus;
   notificationCount: number;
   completedEventConfirmations: string[];
+  completionReports: Record<string, CompletionReport>;
+  demoAuditEntries: DemoAuditRecord[];
   committeeDecision: CommitteeDecision;
   revisionPublicationState: RevisionPublicationState;
   bookmarkedEvents: string[];

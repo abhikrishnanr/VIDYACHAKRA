@@ -9,15 +9,15 @@ import { useDemoState } from "@/lib/demo-state";
 
 export function AuditView() {
   const [query, setQuery] = useState("");
-  const { toast } = useDemoState();
+  const { toast, demoAuditEntries } = useDemoState();
   const results = useMemo(
     () =>
-      auditEntries.filter((entry) =>
+      [...demoAuditEntries, ...auditEntries].filter((entry) =>
         `${entry.action} ${entry.actor} ${entry.scope} ${entry.detail}`
           .toLowerCase()
           .includes(query.toLowerCase()),
       ),
-    [query],
+    [demoAuditEntries, query],
   );
   return (
     <>

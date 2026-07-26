@@ -42,7 +42,7 @@ export const roleDefinitions: Record<DemoRoleId, DemoRoleDefinition> = {
       { label: "University Dashboard", href: "/university/dashboard", icon: "dashboard" },
       { label: "Adopted Calendar", href: "/university/calendar", icon: "calendar" },
       { label: "Report Completion", href: "/university/completion", icon: "compliance" },
-      { label: "Change Requests", href: "/university/requests", icon: "request" },
+      { label: "Change Requests", href: "/university/change-requests", icon: "request" },
       { label: "Affiliated Colleges", href: "/university/colleges", icon: "institution" },
     ],
     accent: "teal",

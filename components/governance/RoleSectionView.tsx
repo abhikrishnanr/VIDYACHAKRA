@@ -26,7 +26,7 @@ import {
   roleDefinitions,
 } from "@/lib/demo-data";
 import { useDemoState } from "@/lib/demo-state";
-import type { WorkspaceRole } from "@/lib/types";
+import type { RagStatus, WorkspaceRole } from "@/lib/types";
 
 type SectionMode =
   | "institutions"
@@ -140,6 +140,32 @@ export function RoleSectionView({
           : mode === "publication" || mode === "revisions"
             ? "Publish version 1.1"
             : "Prepare summary";
+  const incidentStatus: RagStatus =
+    revisionPublicationState === "published"
+      ? "green"
+      : committeeDecision === "approved" ||
+          requestStatus === "approved" ||
+          (requestStatus !== "draft" && requestStatus !== "rejected")
+        ? "amber"
+        : "red";
+  const incidentLabel =
+    revisionPublicationState === "published"
+      ? "Approved exception"
+      : committeeDecision === "approved" || requestStatus === "approved"
+        ? "Approved pending publication"
+        : requestStatus !== "draft" && requestStatus !== "rejected"
+          ? "Under review"
+          : requestStatus === "rejected"
+            ? "Rejected · uncorrected"
+            : "Unauthorised deviation";
+  const incidentReason =
+    revisionPublicationState === "published"
+      ? "The institution-specific exception is official in Calendar Version 1.1."
+      : committeeDecision === "approved" || requestStatus === "approved"
+        ? "The committee decision is recorded; the baseline remains in force until the revision is published."
+        : requestStatus !== "draft" && requestStatus !== "rejected"
+          ? "The seven-day variance is now in formal review under CR-2026-014."
+          : centralIncident.ragReason;
 
   return (
     <>
@@ -178,9 +204,9 @@ export function RoleSectionView({
             <div>
               <p className="eyebrow">CR-2026-014 · Central demonstration incident</p>
               <h2>{centralIncident.title}</h2>
-              <p>{centralIncident.ragReason}</p>
+              <p>{incidentReason}</p>
             </div>
-            <RagBadge status="red" />
+            <RagBadge status={incidentStatus} label={incidentLabel} />
           </div>
           <div className="incident-date-comparison">
             <div>

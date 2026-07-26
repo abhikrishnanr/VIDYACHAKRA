@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "../components/governance/hec-command-centre.css";
 @import "../components/compliance/compliance-matrix.css";
+@import "../components/university/university-workspace.css";
 
 :root {
   --navy: #102a43;

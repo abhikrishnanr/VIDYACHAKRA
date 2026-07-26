@@ -12,6 +12,7 @@ import {
 import type {
   AcademicYear,
   CommitteeDecision,
+  CompletionReport,
   DemoRoleId,
   DemoSessionState,
   Programme,
@@ -37,6 +38,8 @@ export const initialDemoState: DemoSessionState = {
     "admission-commencement",
     "admission-closure",
   ],
+  completionReports: {},
+  demoAuditEntries: [],
   committeeDecision: "pending",
   revisionPublicationState: "not-started",
   bookmarkedEvents: [],
@@ -56,6 +59,11 @@ type DemoStateContextValue = DemoSessionState & {
   setRevisionPublicationState: (state: RevisionPublicationState) => void;
   publishRevision: () => void;
   confirmEventCompletion: (id: string) => void;
+  submitCompletionReport: (
+    id: string,
+    report: Omit<CompletionReport, "submittedAt">,
+  ) => void;
+  submitChangeRequest: () => void;
   toggleBookmark: (id: string) => void;
   setNotificationsRead: (read: boolean) => void;
   toast: (title: string, message: string) => void;
@@ -212,6 +220,62 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
     [commit, toast],
   );
 
+  const submitCompletionReport = useCallback(
+    (id: string, report: Omit<CompletionReport, "submittedAt">) => {
+      const submittedAt = new Date().toISOString();
+      commit((current) => ({
+        ...current,
+        completedEventConfirmations: current.completedEventConfirmations.includes(id)
+          ? current.completedEventConfirmations
+          : [...current.completedEventConfirmations, id],
+        completionReports: {
+          ...current.completionReports,
+          [id]: { ...report, submittedAt },
+        },
+        demoAuditEntries: [
+          {
+            id: `completion-${id}-${Date.now()}`,
+            action: "Milestone completion confirmed",
+            actor: "Prof. Anjali Menon · University Nodal Officer",
+            scope: "Sahya Higher Studies University",
+            timestamp: "26 Jul 2026 · 14:32",
+            detail: `${report.evidenceType} evidence recorded with actual completion date ${report.actualDate}.`,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        "Completion report submitted",
+        "The actual date, remarks and evidence reference are now part of the university record.",
+      );
+    },
+    [commit, toast],
+  );
+
+  const submitChangeRequest = useCallback(() => {
+    commit((current) => ({
+      ...current,
+      requestStatus: "submitted",
+      notificationCount: Math.max(current.notificationCount + 1, 4),
+      demoAuditEntries: [
+        {
+          id: `request-cr-2026-014-${Date.now()}`,
+          action: "Change request submitted",
+          actor: "Prof. Anjali Menon · University Nodal Officer",
+          scope: "CR-2026-014",
+          timestamp: "26 Jul 2026 · 15:08",
+          detail:
+            "Semester 1 Theory Examination date-change request submitted to the HEC Academic Monitoring Cell with impact and evidence records.",
+        },
+        ...current.demoAuditEntries,
+      ],
+    }));
+    toast(
+      "CR-2026-014 submitted",
+      "The request is now in the HEC screening queue and the deviation is under review.",
+    );
+  }, [commit, toast]);
+
   const toggleBookmark = useCallback(
     (id: string) => {
       commit((current) => {
@@ -256,6 +320,8 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       setRevisionPublicationState,
       publishRevision,
       confirmEventCompletion,
+      submitCompletionReport,
+      submitChangeRequest,
       toggleBookmark,
       setNotificationsRead,
       toast,
@@ -274,6 +340,8 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       setRevisionPublicationState,
       publishRevision,
       confirmEventCompletion,
+      submitCompletionReport,
+      submitChangeRequest,
       toggleBookmark,
       setNotificationsRead,
       toast,
