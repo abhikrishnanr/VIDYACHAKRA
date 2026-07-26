@@ -12,7 +12,7 @@ export const metadata: Metadata = {
       "A controlled review, committee decision and publication workflow for official academic calendar revisions.",
     images: [
       {
-        url: "/og.png",
+        url: "/og-governance.png",
         width: 1731,
         height: 909,
         alt: "VIDYACHAKRA academic calendar governance workflow",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "VIDYACHAKRA Academic Calendar Governance",
     description: "Review, decide and publish official academic calendar revisions.",
-    images: ["/og.png"],
+    images: ["/og-governance.png"],
   },
 };
 

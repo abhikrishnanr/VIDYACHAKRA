@@ -3,6 +3,7 @@
 @import "../components/compliance/compliance-matrix.css";
 @import "../components/university/university-workspace.css";
 @import "../components/workflow/governance-workflow.css";
+@import "../components/executive/executive-dashboard.css";
 
 :root {
   --navy: #102a43;
