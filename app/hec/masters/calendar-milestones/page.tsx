@@ -1,5 +1,5 @@
-import { DomainModulePlaceholder } from "@/components/domain/DomainModulePlaceholder";
+import { CalendarMilestoneMaster } from "@/components/masters/CalendarMilestoneMaster";
 
 export default function CalendarMilestonesPage() {
-  return <DomainModulePlaceholder module="calendar-milestones" />;
+  return <CalendarMilestoneMaster />;
 }

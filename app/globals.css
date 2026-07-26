@@ -5,6 +5,7 @@
 @import "../components/workflow/governance-workflow.css";
 @import "../components/executive/executive-dashboard.css";
 @import "../components/domain/domain-placeholder.css";
+@import "../components/masters/master-data-workspace.css";
 
 :root {
   --navy: #102a43;

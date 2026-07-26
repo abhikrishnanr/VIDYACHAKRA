@@ -1,5 +1,5 @@
-import { DomainModulePlaceholder } from "@/components/domain/DomainModulePlaceholder";
+import { CourseMasterWorkspace } from "@/components/masters/CourseMasterWorkspace";
 
 export default function CourseMasterPage() {
-  return <DomainModulePlaceholder module="courses" />;
+  return <CourseMasterWorkspace />;
 }
