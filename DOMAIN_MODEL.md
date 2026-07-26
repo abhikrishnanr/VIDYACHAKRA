@@ -86,11 +86,27 @@ the approved exception.
   admission intake.
 - Semester 2–8 monitoring uses **current strength gap**: sanctioned capacity
   minus current strength.
+- Each active course batch has one aggregate snapshot for every supported
+  semester. The eight-semester journey is therefore a cohort history, not a
+  collection of individual student records.
+- Semester 1 intake may be updated while admission is in progress. Finalising
+  admission protects the reported intake; reopening it requires a reason that
+  remains visible in the local audit history.
 
 Derived gaps are clamped at zero; student counts never become negative. A
 reported value above sanctioned capacity is retained, produces a fill rate over
 100%, and must be shown with an explicit red “Above approved capacity” warning.
 It is not silently capped.
+
+Blank and zero have different meanings. Blank is stored as `null` and means no
+report has been received. Zero is a valid whole-number report and means the
+university deliberately reported no active students for that batch and
+semester.
+
+Every saved batch update records the previous value, new value, actor,
+timestamp, course, delivery unit and semester in the immutable-looking local
+audit stream. The HEC workspace reads these reports but has no mutation action
+for university-submitted numbers.
 
 ## Status semantics
 
