@@ -95,7 +95,7 @@ export const roleDefinitions: Record<DemoRoleId, DemoRoleDefinition> = {
     navigation: [
       {
         label: "Publication Desk",
-        href: "/administrator/dashboard",
+        href: "/hec/publication",
         icon: "publication",
       },
       {
@@ -108,7 +108,7 @@ export const roleDefinitions: Record<DemoRoleId, DemoRoleDefinition> = {
         href: "/administrator/versions",
         icon: "version",
       },
-      { label: "Audit Trail", href: "/administrator/audit", icon: "audit" },
+      { label: "Audit Trail", href: "/audit", icon: "audit" },
     ],
     accent: "terracotta",
   },

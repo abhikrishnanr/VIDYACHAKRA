@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
-import { WorkflowDashboard } from "@/components/governance/DashboardViews";
+import { GovernanceWorkflowDashboard } from "@/components/workflow/GovernanceWorkflowDashboard";
 
-export const metadata: Metadata = { title: "Governance Queue" };
+export const metadata: Metadata = {
+  title: "Academic Calendar Governance Workflow",
+  description:
+    "Controlled scrutiny, committee decision and publication for official academic calendar changes.",
+};
 
 export default function WorkflowDashboardPage() {
-  return <WorkflowDashboard />;
+  return <GovernanceWorkflowDashboard />;
 }

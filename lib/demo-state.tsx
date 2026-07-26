@@ -15,6 +15,7 @@ import type {
   CompletionReport,
   DemoRoleId,
   DemoSessionState,
+  HecRecommendation,
   Programme,
   RequestStatus,
   RevisionPublicationState,
@@ -40,8 +41,15 @@ export const initialDemoState: DemoSessionState = {
   ],
   completionReports: {},
   demoAuditEntries: [],
+  hecRecommendation: "pending",
+  officerNote: "",
   committeeDecision: "pending",
+  committeeCondition: "",
+  committeeMeetingNote: "",
   revisionPublicationState: "not-started",
+  publicationSchedule: "",
+  institutionsNotified: false,
+  publicCalendarUpdated: false,
   bookmarkedEvents: [],
 };
 
@@ -57,6 +65,19 @@ type DemoStateContextValue = DemoSessionState & {
   setRequestStatus: (status: RequestStatus) => void;
   setCommitteeDecision: (decision: CommitteeDecision) => void;
   setRevisionPublicationState: (state: RevisionPublicationState) => void;
+  recordHecRecommendation: (
+    recommendation: Exclude<HecRecommendation, "pending">,
+    note: string,
+  ) => void;
+  saveOfficerNote: (note: string) => void;
+  recordCommitteeOutcome: (
+    decision: Exclude<CommitteeDecision, "pending">,
+    condition: string,
+    meetingNote: string,
+  ) => void;
+  saveCommitteeMeetingNote: (note: string) => void;
+  scheduleRevisionPublication: (schedule: string) => void;
+  returnPublicationToCommittee: (note: string) => void;
   publishRevision: () => void;
   confirmEventCompletion: (id: string) => void;
   submitCompletionReport: (
@@ -193,19 +214,337 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
     [commit],
   );
 
+  const recordHecRecommendation = useCallback(
+    (
+      hecRecommendation: Exclude<HecRecommendation, "pending">,
+      officerNote: string,
+    ) => {
+      const returned = hecRecommendation === "clarification";
+      const recommendationLabel =
+        hecRecommendation === "approval"
+          ? "Recommend approval"
+          : hecRecommendation === "rejection"
+            ? "Recommend rejection"
+            : "Return for clarification";
+      commit((current) => ({
+        ...current,
+        hecRecommendation,
+        officerNote,
+        requestStatus: returned ? "returned" : "committee-review",
+        notificationCount: Math.max(current.notificationCount + 1, 5),
+        demoAuditEntries: [
+          {
+            id: `hec-recommendation-${Date.now()}`,
+            action: recommendationLabel,
+            actor: "Meera Nair",
+            actorRole: "HEC Academic Monitoring Officer",
+            scope: "Semester 1 Theory Examination",
+            timestamp: "27 Jul 2026 · 11:20",
+            detail:
+              officerNote ||
+              "HEC scrutiny completed against the published FYUGP baseline and submitted impact evidence.",
+            previousValue: "Submitted by University",
+            newValue: returned
+              ? "Returned for Clarification"
+              : "Empowered Committee Review",
+            workflowStage: returned
+              ? "Returned to University"
+              : "Recommendation Recorded",
+            reference: "CR-2026-014",
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        returned ? "Clarification requested" : "Recommendation recorded",
+        returned
+          ? "CR-2026-014 has been returned to Sahya University."
+          : "CR-2026-014 is now in the Empowered Committee review queue.",
+      );
+    },
+    [commit, toast],
+  );
+
+  const saveOfficerNote = useCallback(
+    (officerNote: string) => {
+      commit((current) => ({
+        ...current,
+        officerNote,
+        requestStatus:
+          current.requestStatus === "submitted" ? "screening" : current.requestStatus,
+        demoAuditEntries: [
+          {
+            id: `officer-note-${Date.now()}`,
+            action: "HEC scrutiny note added",
+            actor: "Meera Nair",
+            actorRole: "HEC Academic Monitoring Officer",
+            scope: "Semester 1 Theory Examination",
+            timestamp: "27 Jul 2026 · 10:35",
+            detail: officerNote,
+            previousValue: "No officer note",
+            newValue: "Officer note recorded",
+            workflowStage: "Scrutiny by HEC Academic Officer",
+            reference: "CR-2026-014",
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        "Officer note recorded",
+        "The note is part of the scrutiny record and the published date remains unchanged.",
+      );
+    },
+    [commit, toast],
+  );
+
+  const recordCommitteeOutcome = useCallback(
+    (
+      committeeDecision: Exclude<CommitteeDecision, "pending">,
+      committeeCondition: string,
+      committeeMeetingNote: string,
+    ) => {
+      const approved =
+        committeeDecision === "approved" ||
+        committeeDecision === "approved-with-conditions";
+      const requestStatus: RequestStatus = approved
+        ? "approved"
+        : committeeDecision === "returned"
+          ? "returned"
+          : "rejected";
+      const decisionLabel =
+        committeeDecision === "approved-with-conditions"
+          ? "Approved with Conditions"
+          : committeeDecision.charAt(0).toUpperCase() +
+            committeeDecision.slice(1);
+      commit((current) => ({
+        ...current,
+        committeeDecision,
+        committeeCondition,
+        committeeMeetingNote,
+        requestStatus,
+        revisionPublicationState: approved ? "ready" : "not-started",
+        notificationCount: Math.max(current.notificationCount + 1, 6),
+        demoAuditEntries: [
+          {
+            id: `committee-decision-${Date.now()}`,
+            action: `Committee decision · ${decisionLabel}`,
+            actor: "Dr. Ravi Varma",
+            actorRole: "Empowered Committee Member",
+            scope: "Semester 1 Theory Examination",
+            timestamp: "29 Jul 2026 · 16:05",
+            detail:
+              committeeMeetingNote ||
+              (approved
+                ? "The committee accepted the institution-specific date revision."
+                : "The committee recorded its decision against the submitted request."),
+            previousValue: "Empowered Committee Review",
+            newValue: approved
+              ? "Approved · Publication Required"
+              : decisionLabel,
+            workflowStage: "Committee Decision",
+            reference: "EC/FYUGP/2026/08 · CR-2026-014",
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        approved ? "Committee approval recorded" : "Committee decision recorded",
+        approved
+          ? "The request remains amber until Calendar Version 1.1 is published."
+          : `CR-2026-014 is now ${requestStatus}.`,
+      );
+    },
+    [commit, toast],
+  );
+
+  const saveCommitteeMeetingNote = useCallback(
+    (committeeMeetingNote: string) => {
+      commit((current) => ({
+        ...current,
+        committeeMeetingNote,
+        demoAuditEntries: [
+          {
+            id: `committee-note-${Date.now()}`,
+            action: "Committee meeting note recorded",
+            actor: "Dr. Ravi Varma",
+            actorRole: "Empowered Committee Member",
+            scope: "Agenda item EC/FYUGP/2026/08",
+            timestamp: "29 Jul 2026 · 15:48",
+            detail: committeeMeetingNote,
+            previousValue: "No meeting note",
+            newValue: "Meeting note recorded",
+            workflowStage: "Empowered Committee Review",
+            reference: "CR-2026-014",
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        "Meeting note recorded",
+        "The note is retained with the committee review record.",
+      );
+    },
+    [commit, toast],
+  );
+
+  const scheduleRevisionPublication = useCallback(
+    (publicationSchedule: string) => {
+      const approved =
+        session.committeeDecision === "approved" ||
+        session.committeeDecision === "approved-with-conditions";
+      if (!approved || session.revisionPublicationState !== "ready") {
+        toast(
+          "Scheduling is not authorised",
+          "An approved committee decision is required before publication can be scheduled.",
+        );
+        return;
+      }
+      commit((current) => ({
+          ...current,
+          publicationSchedule,
+          demoAuditEntries: [
+            {
+              id: `publication-scheduled-${Date.now()}`,
+              action: "Publication scheduled",
+              actor: "Leela Krishnan",
+              actorRole: "HEC Calendar Administrator",
+              scope: "Academic Calendar Version 1.1",
+              timestamp: "01 Aug 2026 · 10:10",
+              detail: `Controlled publication scheduled for ${publicationSchedule}.`,
+              previousValue: "Approved · Awaiting Publication",
+              newValue: `Scheduled · ${publicationSchedule}`,
+              workflowStage: "Publication by HEC Calendar Administrator",
+              reference: "KSHEC/ACAD/CAL/2026/01-R1",
+            },
+            ...current.demoAuditEntries,
+          ],
+        }));
+      toast(
+        "Publication scheduled",
+        "The release remains unpublished until the administrator confirms publication.",
+      );
+    },
+    [
+      commit,
+      session.committeeDecision,
+      session.revisionPublicationState,
+      toast,
+    ],
+  );
+
+  const returnPublicationToCommittee = useCallback(
+    (note: string) => {
+      commit((current) => ({
+        ...current,
+        committeeDecision: "pending",
+        committeeMeetingNote: note,
+        requestStatus: "committee-review",
+        revisionPublicationState: "not-started",
+        publicationSchedule: "",
+        demoAuditEntries: [
+          {
+            id: `publication-returned-${Date.now()}`,
+            action: "Publication task returned",
+            actor: "Leela Krishnan",
+            actorRole: "HEC Calendar Administrator",
+            scope: "Academic Calendar Version 1.1",
+            timestamp: "01 Aug 2026 · 10:25",
+            detail:
+              note ||
+              "Publication returned to the Committee Secretariat for clarification.",
+            previousValue: "Approved · Awaiting Publication",
+            newValue: "Empowered Committee Review",
+            workflowStage: "Returned to Committee Secretariat",
+            reference: "CR-2026-014",
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        "Returned to Committee Secretariat",
+        "The publication task is paused pending a clarified committee record.",
+      );
+    },
+    [commit, toast],
+  );
+
   const publishRevision = useCallback(() => {
+    const approved =
+      session.committeeDecision === "approved" ||
+      session.committeeDecision === "approved-with-conditions";
+    if (!approved || session.revisionPublicationState !== "ready") {
+      toast(
+        "Publication is not authorised",
+        "An approved committee decision is required before a new calendar version can be published.",
+      );
+      return;
+    }
     commit((current) => ({
       ...current,
       masterCalendarVersion: "1.1",
       publicationStatus: "locked",
       requestStatus: "published",
       revisionPublicationState: "published",
+      publicationSchedule: "",
+      institutionsNotified: true,
+      publicCalendarUpdated: true,
+      notificationCount: Math.max(current.notificationCount + 3, 8),
+      demoAuditEntries: [
+        {
+          id: `public-calendar-updated-${Date.now()}`,
+          action: "Public calendar updated",
+          actor: "VIDYACHAKRA Publication Service",
+          actorRole: "Public Calendar Service",
+          scope: "Sahya Higher Studies University · 18 colleges",
+          timestamp: "02 Aug 2026 · 10:04",
+          detail:
+            "The public Semester 1 Theory Examination date now shows 12 December 2026 as an approved institution-specific exception.",
+          previousValue: "05 Dec 2026 · Version 1.0",
+          newValue: "12 Dec 2026 · Version 1.1",
+          workflowStage: "Public Calendar Updated",
+          reference: "KSHEC/ACAD/CAL/2026/01-R1",
+        },
+        {
+          id: `institutions-notified-${Date.now()}`,
+          action: "Institutions notified",
+          actor: "VIDYACHAKRA Notification Service",
+          actorRole: "System Notification",
+          scope: "All governed institutions",
+          timestamp: "02 Aug 2026 · 10:03",
+          detail:
+            "Version 1.1 publication notice distributed to universities and affected colleges.",
+          previousValue: "Notification pending",
+          newValue: "Notification delivered",
+          workflowStage: "Institutions Notified",
+          reference: "NOTICE/FYUGP/2026/18",
+        },
+        {
+          id: `revision-published-${Date.now()}`,
+          action: "Calendar Version 1.1 published and locked",
+          actor: "Leela Krishnan",
+          actorRole: "HEC Calendar Administrator",
+          scope: "FYUGP Academic Calendar 2026–27",
+          timestamp: "02 Aug 2026 · 10:00",
+          detail:
+            "Approved revision published with the original Version 1.0 value retained in version history.",
+          previousValue: "05 Dec 2026 · Version 1.0",
+          newValue: "12 Dec 2026 · Version 1.1",
+          workflowStage: "Publication by HEC Calendar Administrator",
+          reference: "KSHEC/ACAD/CAL/2026/01-R1",
+        },
+        ...current.demoAuditEntries,
+      ],
     }));
     toast(
       "Revision published",
       "Calendar version 1.1 is now the locked demonstration baseline.",
     );
-  }, [commit, toast]);
+  }, [
+    commit,
+    session.committeeDecision,
+    session.revisionPublicationState,
+    toast,
+  ]);
 
   const confirmEventCompletion = useCallback(
     (id: string) => {
@@ -256,16 +595,30 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
     commit((current) => ({
       ...current,
       requestStatus: "submitted",
+      hecRecommendation: "pending",
+      officerNote: "",
+      committeeDecision: "pending",
+      committeeCondition: "",
+      committeeMeetingNote: "",
+      revisionPublicationState: "not-started",
+      publicationSchedule: "",
+      institutionsNotified: false,
+      publicCalendarUpdated: false,
       notificationCount: Math.max(current.notificationCount + 1, 4),
       demoAuditEntries: [
         {
           id: `request-cr-2026-014-${Date.now()}`,
           action: "Change request submitted",
           actor: "Prof. Anjali Menon · University Nodal Officer",
+          actorRole: "University Nodal Officer",
           scope: "CR-2026-014",
           timestamp: "26 Jul 2026 · 15:08",
           detail:
             "Semester 1 Theory Examination date-change request submitted to the HEC Academic Monitoring Cell with impact and evidence records.",
+          previousValue: "Drafted by University",
+          newValue: "Submitted by University",
+          workflowStage: "Submitted by University",
+          reference: "CR-2026-014",
         },
         ...current.demoAuditEntries,
       ],
@@ -318,6 +671,12 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       setRequestStatus,
       setCommitteeDecision,
       setRevisionPublicationState,
+      recordHecRecommendation,
+      saveOfficerNote,
+      recordCommitteeOutcome,
+      saveCommitteeMeetingNote,
+      scheduleRevisionPublication,
+      returnPublicationToCommittee,
       publishRevision,
       confirmEventCompletion,
       submitCompletionReport,
@@ -338,6 +697,12 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       setRequestStatus,
       setCommitteeDecision,
       setRevisionPublicationState,
+      recordHecRecommendation,
+      saveOfficerNote,
+      recordCommitteeOutcome,
+      saveCommitteeMeetingNote,
+      scheduleRevisionPublication,
+      returnPublicationToCommittee,
       publishRevision,
       confirmEventCompletion,
       submitCompletionReport,

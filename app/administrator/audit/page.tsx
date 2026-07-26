@@ -1,5 +1,5 @@
-import { RoleSectionView } from "@/components/governance/RoleSectionView";
+import { AuditView } from "@/components/governance/AuditView";
 
 export default function AdministratorAuditPage() {
-  return <RoleSectionView role="administrator" mode="audit" />;
+  return <AuditView />;
 }

@@ -144,6 +144,7 @@ export function RoleSectionView({
     revisionPublicationState === "published"
       ? "green"
       : committeeDecision === "approved" ||
+          committeeDecision === "approved-with-conditions" ||
           requestStatus === "approved" ||
           (requestStatus !== "draft" && requestStatus !== "rejected")
         ? "amber"
@@ -151,7 +152,9 @@ export function RoleSectionView({
   const incidentLabel =
     revisionPublicationState === "published"
       ? "Approved exception"
-      : committeeDecision === "approved" || requestStatus === "approved"
+      : committeeDecision === "approved" ||
+          committeeDecision === "approved-with-conditions" ||
+          requestStatus === "approved"
         ? "Approved pending publication"
         : requestStatus !== "draft" && requestStatus !== "rejected"
           ? "Under review"
@@ -161,7 +164,9 @@ export function RoleSectionView({
   const incidentReason =
     revisionPublicationState === "published"
       ? "The institution-specific exception is official in Calendar Version 1.1."
-      : committeeDecision === "approved" || requestStatus === "approved"
+      : committeeDecision === "approved" ||
+          committeeDecision === "approved-with-conditions" ||
+          requestStatus === "approved"
         ? "The committee decision is recorded; the baseline remains in force until the revision is published."
         : requestStatus !== "draft" && requestStatus !== "rejected"
           ? "The seven-day variance is now in formal review under CR-2026-014."
