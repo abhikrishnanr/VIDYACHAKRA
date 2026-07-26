@@ -1,5 +1,5 @@
-import { RoleSectionView } from "@/components/governance/RoleSectionView";
+import { DomainModulePlaceholder } from "@/components/domain/DomainModulePlaceholder";
 
 export default function InstitutionsPage() {
-  return <RoleSectionView role="monitoring" mode="institutions" />;
+  return <DomainModulePlaceholder module="institutions" />;
 }

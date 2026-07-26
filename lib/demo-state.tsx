@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import type {
-  AcademicYear,
+  AcademicYearLabel,
   CommitteeDecision,
   CompletionReport,
   DemoRoleId,
@@ -21,10 +21,14 @@ import type {
   RevisionPublicationState,
   Semester,
 } from "./types";
+import { defaultDomainState } from "./domain-data";
 
 type Toast = { id: number; title: string; message: string };
 
+export const DEMO_STATE_VERSION = 4;
+
 export const initialDemoState: DemoSessionState = {
+  demoStateVersion: DEMO_STATE_VERSION,
   activeRole: null,
   activeInstitution: "Sahya Higher Studies University",
   academicYear: "2026–27",
@@ -51,6 +55,7 @@ export const initialDemoState: DemoSessionState = {
   institutionsNotified: false,
   publicCalendarUpdated: false,
   bookmarkedEvents: [],
+  ...defaultDomainState,
 };
 
 type DemoStateContextValue = DemoSessionState & {
@@ -59,7 +64,7 @@ type DemoStateContextValue = DemoSessionState & {
   selectWorkspace: (role: DemoRoleId) => void;
   signOut: () => void;
   resetDemo: () => void;
-  setAcademicYear: (year: AcademicYear) => void;
+  setAcademicYear: (year: AcademicYearLabel) => void;
   setSelectedProgramme: (programme: Programme) => void;
   setSelectedSemester: (semester: Semester) => void;
   setRequestStatus: (status: RequestStatus) => void;
@@ -101,6 +106,42 @@ function isStoredState(value: unknown): value is Partial<DemoSessionState> {
   return typeof value === "object" && value !== null;
 }
 
+const domainCollectionKeys = [
+  "academicYears",
+  "calendarMilestoneDefinitions",
+  "courseMasters",
+  "universityProfiles",
+  "academicDeliveryUnits",
+  "universityCalendarSubmissions",
+  "universityCalendarEntries",
+  "courseOfferings",
+  "courseBatches",
+  "studentCohorts",
+  "semesterStrengthSnapshots",
+] as const;
+
+function migrateDemoState(stored: Partial<DemoSessionState>): DemoSessionState {
+  const migrated: DemoSessionState = {
+    ...initialDemoState,
+    ...stored,
+    demoStateVersion: DEMO_STATE_VERSION,
+    completionReports:
+      stored.completionReports &&
+      typeof stored.completionReports === "object" &&
+      !Array.isArray(stored.completionReports)
+        ? stored.completionReports
+        : initialDemoState.completionReports,
+  };
+
+  for (const key of domainCollectionKeys) {
+    if (!Array.isArray(stored[key])) {
+      (migrated[key] as unknown[]) = initialDemoState[key] as unknown[];
+    }
+  }
+
+  return migrated;
+}
+
 export function DemoStateProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<DemoSessionState>(initialDemoState);
   const [hydrated, setHydrated] = useState(false);
@@ -113,7 +154,9 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
         if (stored) {
           const parsed = JSON.parse(stored) as unknown;
           if (isStoredState(parsed)) {
-            setSession({ ...initialDemoState, ...parsed });
+            const migrated = migrateDemoState(parsed);
+            setSession(migrated);
+            persistState(migrated);
           }
         }
       } catch {
@@ -171,7 +214,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
   }, [toast]);
 
   const setAcademicYear = useCallback(
-    (academicYear: AcademicYear) => {
+    (academicYear: AcademicYearLabel) => {
       commit((current) => ({ ...current, academicYear }));
       toast("Academic year selected", `The workspace is showing ${academicYear}.`);
     },

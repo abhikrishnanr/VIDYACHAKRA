@@ -41,6 +41,26 @@ export const roleDefinitions: Record<DemoRoleId, DemoRoleDefinition> = {
     navigation: [
       { label: "University Dashboard", href: "/university/dashboard", icon: "dashboard" },
       { label: "Adopted Calendar", href: "/university/calendar", icon: "calendar" },
+      {
+        label: "Institution Structure",
+        href: "/university/institution-structure",
+        icon: "structure",
+      },
+      {
+        label: "Calendar Submissions",
+        href: "/university/calendar-submissions",
+        icon: "publication",
+      },
+      {
+        label: "Course Offerings",
+        href: "/university/course-offerings",
+        icon: "course",
+      },
+      {
+        label: "Student Strength",
+        href: "/university/student-strength",
+        icon: "students",
+      },
       { label: "Report Completion", href: "/university/completion", icon: "compliance" },
       { label: "Change Requests", href: "/university/change-requests", icon: "request" },
       { label: "Affiliated Colleges", href: "/university/colleges", icon: "institution" },
@@ -59,7 +79,24 @@ export const roleDefinitions: Record<DemoRoleId, DemoRoleDefinition> = {
     navigation: [
       { label: "Command Centre", href: "/hec/dashboard", icon: "dashboard" },
       { label: "Compliance Matrix", href: "/hec/compliance", icon: "compliance" },
-      { label: "Institutions", href: "/hec/institutions", icon: "institution" },
+      { label: "Institution Registry", href: "/hec/institutions", icon: "institution" },
+      {
+        label: "Academic Years",
+        href: "/hec/masters/academic-years",
+        icon: "master",
+      },
+      {
+        label: "Milestone Master",
+        href: "/hec/masters/calendar-milestones",
+        icon: "calendar",
+      },
+      {
+        label: "Course Master",
+        href: "/hec/masters/courses",
+        icon: "course",
+      },
+      { label: "Admission Intake", href: "/hec/admissions", icon: "admission" },
+      { label: "Vacancy Monitor", href: "/hec/vacancies", icon: "vacancy" },
       { label: "Change Requests", href: "/hec/requests", icon: "request" },
       { label: "Calendar Versions", href: "/hec/versions", icon: "version" },
       { label: "Reports", href: "/hec/reports", icon: "report" },

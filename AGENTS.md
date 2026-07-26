@@ -14,3 +14,10 @@
 12. Do not use official government emblems, university logos, or seals unless supplied.
 13. Only run basic build, configured lint, and browser sanity checks.
 14. Do not create automated tests unless specifically requested.
+15. Universities cannot create course names.
+16. University course selectors must use active HEC Course Master records.
+17. Course offerings always belong to AcademicDeliveryUnits.
+18. Semester 1 shows admission vacancies.
+19. Semesters 2 to 8 show current strength gaps.
+20. Calendar compliance and seat utilisation must use separate labels and legends.
+21. Do not remove the existing academic calendar governance workflow.
