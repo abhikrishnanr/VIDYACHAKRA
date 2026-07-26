@@ -144,7 +144,7 @@ export function HECDashboard() {
               <FileCheck2 size={18} />
             </span>
             <div>
-              <strong>Calendar version 1.4 published</strong>
+              <strong>Calendar version 1.0 published</strong>
               <p>Released to participating universities by Dr. Meera Nair.</p>
             </div>
             <time>10:42</time>

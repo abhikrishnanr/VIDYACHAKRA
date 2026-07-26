@@ -138,7 +138,7 @@ export function RoleSectionView({
         : mode === "decisions"
           ? "Approve request"
           : mode === "publication" || mode === "revisions"
-            ? "Publish version 1.5"
+            ? "Publish version 1.1"
             : "Prepare summary";
 
   return (
@@ -313,7 +313,7 @@ export function RoleSectionView({
             />
           </div>
           <div className="version-ledger-row">
-            <span>Proposed version 1.5</span>
+            <span>Proposed version 1.1</span>
             <strong>Includes approved examination revision</strong>
             <span className={`revision-state state-${revisionPublicationState}`}>
               {revisionPublicationState.replace("-", " ")}

@@ -6,21 +6,21 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://vidyachakra.abhikrishnanr.chatgpt.site"),
   title: {
-    default: "VIDYACHAKRA · One State. One Academic Rhythm.",
+    default: "VIDYACHAKRA · Kerala Higher Education Calendar",
     template: "%s · VIDYACHAKRA",
   },
   description:
-    "Kerala Higher Education Academic & Examination Calendar — a shared rhythm for academic planning, examinations and institutional coordination.",
+    "One trusted academic timeline for Kerala higher education. Find official class dates, examinations, results and approved revisions.",
   openGraph: {
-    title: "VIDYACHAKRA · One State. One Academic Rhythm.",
-    description: "Kerala Higher Education Academic & Examination Calendar",
-    images: [{ url: "/og-workspaces.png", width: 1536, height: 1024, alt: "VIDYACHAKRA role-based academic calendar workspaces" }],
+    title: "VIDYACHAKRA · Kerala Higher Education Calendar",
+    description: "One trusted academic timeline for Kerala higher education.",
+    images: [{ url: "/og-public-portal.png", width: 1536, height: 1024, alt: "VIDYACHAKRA public academic calendar portal" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "VIDYACHAKRA · One State. One Academic Rhythm.",
-    description: "Kerala Higher Education Academic & Examination Calendar",
-    images: ["/og-workspaces.png"],
+    title: "VIDYACHAKRA · Kerala Higher Education Calendar",
+    description: "One trusted academic timeline for Kerala higher education.",
+    images: ["/og-public-portal.png"],
   },
   icons: {
     icon: "/brand/vidyachakra-mark.svg",

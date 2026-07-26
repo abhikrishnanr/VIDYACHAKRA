@@ -11,14 +11,13 @@ export function PublicShell({ children }: { children: ReactNode }) {
         <div>
           <Brand compact />
           <p>
-            A shared academic coordination prototype for Kerala&apos;s higher
-            education ecosystem.
+            One trusted academic timeline for Kerala higher education.
           </p>
         </div>
         <div className="footer-meta">
           <span>Academic year 2026–27</span>
-          <span>Accessibility</span>
-          <span>Contact secretariat</span>
+          <span>Official calendar v1.0</span>
+          <span>Help &amp; accessibility</span>
         </div>
       </footer>
     </div>

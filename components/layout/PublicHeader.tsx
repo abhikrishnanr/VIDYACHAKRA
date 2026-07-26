@@ -6,9 +6,10 @@ import { useState } from "react";
 import { Brand } from "@/components/brand/Brand";
 
 const links = [
-  { href: "/", label: "Platform" },
-  { href: "/calendar", label: "Academic calendar" },
-  { href: "/#governance", label: "Governance" },
+  { href: "/", label: "Home" },
+  { href: "/calendar", label: "Academic Calendar" },
+  { href: "/#journey", label: "Academic Journey" },
+  { href: "/#institutions", label: "Institutions" },
 ];
 
 export function PublicHeader() {
@@ -26,7 +27,7 @@ export function PublicHeader() {
         </nav>
         <div className="public-header-actions">
           <Link className="button button-quiet public-signin" href="/login">
-            Institutional sign in
+            Institution Workspace
           </Link>
           <button
             className="icon-button mobile-menu-button"
@@ -46,7 +47,7 @@ export function PublicHeader() {
             </Link>
           ))}
           <Link href="/login" onClick={() => setMenuOpen(false)}>
-            Institutional sign in
+            Institution Workspace
           </Link>
         </nav>
       ) : null}

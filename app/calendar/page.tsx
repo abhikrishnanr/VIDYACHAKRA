@@ -3,30 +3,32 @@ import { AcademicCalendar } from "@/components/calendar/AcademicCalendar";
 import { PublicShell } from "@/components/layout/PublicShell";
 
 export const metadata: Metadata = {
-  title: "State Academic Calendar",
+  title: "Public Academic Calendar",
   description:
-    "Explore the shared academic and examination milestones for Kerala higher education.",
+    "Search official FYUGP class dates, assessments, examinations, valuation periods, results and approved revisions.",
 };
 
 export default function CalendarPage() {
   return (
     <PublicShell>
-      <section className="public-page-hero calendar-page-hero">
+      <section className="public-calendar-hero">
         <div>
-          <p className="eyebrow">State academic baseline · 2026–27</p>
-          <h1>A shared view of the academic year</h1>
+          <p className="portal-section-kicker">
+            Kerala higher education · FYUGP 2026–27
+          </p>
+          <h1>Your academic year, in one clear view.</h1>
           <p>
-            Explore coordinated teaching, assessment, examination and governance
-            milestones across Kerala&apos;s participating higher education institutions.
+            Search official academic events, focus on your institution, and open
+            any date for its complete publication details.
           </p>
         </div>
-        <div className="calendar-hero-seal">
-          <span>VERSION</span>
-          <strong>1.4</strong>
-          <small>Published 26 Jul 2026</small>
+        <div className="public-calendar-hero-note">
+          <span>PUBLIC CALENDAR</span>
+          <strong>Official dates and approved revisions</strong>
+          <small>Updated 26 July 2026</small>
         </div>
       </section>
-      <section className="calendar-page-body">
+      <section className="public-calendar-page-body">
         <AcademicCalendar />
       </section>
     </PublicShell>

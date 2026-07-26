@@ -45,7 +45,7 @@ export function AuditView() {
           <ShieldCheck size={21} />
         </span>
         <div>
-          <strong>Complete record for calendar version 1.4</strong>
+          <strong>Complete record for calendar version 1.0</strong>
           <p>
             Each entry identifies who acted, what changed, the affected scope and when
             the action was recorded.

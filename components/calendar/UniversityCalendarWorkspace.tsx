@@ -72,7 +72,7 @@ export function UniversityCalendarWorkspace() {
           </span>
           <div>
             <strong>State baseline synchronised</strong>
-            <p>Version 1.4 · published 26 July at 10:42</p>
+            <p>Version 1.0 · published 26 July at 10:42</p>
           </div>
         </div>
         <div className="workspace-legend">

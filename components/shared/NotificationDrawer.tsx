@@ -52,7 +52,7 @@ export function NotificationDrawer({
         <div className="drawer-notification">
           <span><CalendarDays size={18} /></span>
           <div>
-            <strong>Version 1.4 remains the active baseline</strong>
+            <strong>Version 1.0 remains the active baseline</strong>
             <p>No approved revision has been published for the examination window.</p>
             <small>Today · 10:42</small>
           </div>

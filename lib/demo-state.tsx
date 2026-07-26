@@ -29,7 +29,7 @@ export const initialDemoState: DemoSessionState = {
   selectedProgramme: "Four Year Undergraduate Programme (FYUGP)",
   selectedSemester: "Semester 1",
   requestStatus: "draft",
-  masterCalendarVersion: "1.4",
+  masterCalendarVersion: "1.0",
   publicationStatus: "published",
   notificationCount: 3,
   completedEventConfirmations: [
@@ -62,7 +62,7 @@ type DemoStateContextValue = DemoSessionState & {
 };
 
 const DemoContext = createContext<DemoStateContextValue | null>(null);
-const storageKey = "vidyachakra-demo-state-v2";
+const storageKey = "vidyachakra-demo-state-v3";
 
 function persistState(state: DemoSessionState) {
   window.localStorage.setItem(storageKey, JSON.stringify(state));
@@ -188,14 +188,14 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
   const publishRevision = useCallback(() => {
     commit((current) => ({
       ...current,
-      masterCalendarVersion: "1.5",
+      masterCalendarVersion: "1.1",
       publicationStatus: "locked",
       requestStatus: "published",
       revisionPublicationState: "published",
     }));
     toast(
       "Revision published",
-      "Calendar version 1.5 is now the locked demonstration baseline.",
+      "Calendar version 1.1 is now the locked demonstration baseline.",
     );
   }, [commit, toast]);
 
