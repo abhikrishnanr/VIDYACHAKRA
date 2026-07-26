@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { InstitutionComplianceDetail } from "@/components/compliance/InstitutionComplianceDetail";
+import { InstitutionStructureDetail } from "@/components/institutions/InstitutionStructureDetail";
 
 export const metadata: Metadata = {
-  title: "Institution Compliance Detail",
+  title: "University Institution Structure",
   description:
-    "Institution-level FYUGP calendar alignment, evidence and change-request history.",
+    "University operating model, academic delivery units, offerings and reporting coverage.",
 };
 
 export default async function InstitutionDetailPage({
@@ -13,5 +13,5 @@ export default async function InstitutionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <InstitutionComplianceDetail id={id} />;
+  return <InstitutionStructureDetail id={id} workspace="hec" />;
 }

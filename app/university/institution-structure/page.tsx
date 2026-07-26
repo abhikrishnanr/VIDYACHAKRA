@@ -1,5 +1,5 @@
-import { DomainModulePlaceholder } from "@/components/domain/DomainModulePlaceholder";
+import { InstitutionStructureDetail } from "@/components/institutions/InstitutionStructureDetail";
 
 export default function InstitutionStructurePage() {
-  return <DomainModulePlaceholder module="institution-structure" />;
+  return <InstitutionStructureDetail id="sahya" workspace="university" />;
 }

@@ -6,6 +6,7 @@
 @import "../components/executive/executive-dashboard.css";
 @import "../components/domain/domain-placeholder.css";
 @import "../components/masters/master-data-workspace.css";
+@import "../components/institutions/institution-structure.css";
 
 :root {
   --navy: #102a43;

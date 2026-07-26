@@ -12,6 +12,7 @@ import {
 import type {
   AcademicYearLabel,
   AcademicYear,
+  AcademicDeliveryUnit,
   CalendarMilestoneDefinition,
   CommitteeDecision,
   CompletionReport,
@@ -23,12 +24,13 @@ import type {
   RequestStatus,
   RevisionPublicationState,
   Semester,
+  UniversityOperatingModel,
 } from "./types";
 import { defaultDomainState } from "./domain-data";
 
 type Toast = { id: number; title: string; message: string };
 
-export const DEMO_STATE_VERSION = 5;
+export const DEMO_STATE_VERSION = 6;
 
 export const initialDemoState: DemoSessionState = {
   demoStateVersion: DEMO_STATE_VERSION,
@@ -79,6 +81,11 @@ type DemoStateContextValue = DemoSessionState & {
   setCalendarMilestoneActive: (id: string, active: boolean) => boolean;
   saveCourseMaster: (record: CourseMaster, mode: "create" | "edit") => boolean;
   setCourseMasterActive: (id: string, active: boolean) => boolean;
+  saveAcademicDeliveryUnit: (record: AcademicDeliveryUnit) => boolean;
+  setUniversityOperatingModel: (
+    universityId: string,
+    operatingModel: UniversityOperatingModel,
+  ) => boolean;
   setSelectedProgramme: (programme: Programme) => void;
   setSelectedSemester: (semester: Semester) => void;
   setRequestStatus: (status: RequestStatus) => void;
@@ -165,6 +172,24 @@ function migrateDemoState(stored: Partial<DemoSessionState>): DemoSessionState {
         ...missingDefaults,
       ];
     }
+    const storedUnits = migrated.academicDeliveryUnits;
+    const storedById = new Map(storedUnits.map((unit) => [unit.id, unit]));
+    const defaultIds = new Set(
+      initialDemoState.academicDeliveryUnits.map((unit) => unit.id),
+    );
+    migrated.academicDeliveryUnits = [
+      ...initialDemoState.academicDeliveryUnits.map((unit) => ({
+        ...unit,
+        ...(storedById.get(unit.id) ?? {}),
+        name: unit.name,
+        shortName: unit.shortName,
+        unitType: unit.unitType,
+        teachingCommencedAcademicYearId:
+          storedById.get(unit.id)?.teachingCommencedAcademicYearId ??
+          unit.teachingCommencedAcademicYearId,
+      })),
+      ...storedUnits.filter((unit) => !defaultIds.has(unit.id)),
+    ];
   }
 
   return migrated;
@@ -580,6 +605,89 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       session.courseMasters,
       toast,
     ],
+  );
+
+  const saveAcademicDeliveryUnit = useCallback(
+    (record: AcademicDeliveryUnit) => {
+      if (session.activeRole !== "university") {
+        toast(
+          "University action required",
+          "Delivery units are added from the university institution-structure workspace.",
+        );
+        return false;
+      }
+      commit((current) => ({
+        ...current,
+        academicDeliveryUnits: [...current.academicDeliveryUnits, record],
+        demoAuditEntries: [
+          {
+            id: `delivery-unit-created-${Date.now()}`,
+            action: "Academic delivery unit created",
+            actor: "Prof. Anjali Menon",
+            actorRole: "University Nodal Officer",
+            scope: record.name,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail: `${record.institutionCode} · ${record.unitType.replaceAll("_", " ")} · ${record.district}.`,
+            previousValue: "No delivery unit",
+            newValue: record.active ? "Active" : "Inactive",
+            workflowStage: "University Institution Structure",
+            reference: record.id,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        "Delivery unit added",
+        `${record.name} is now available to course-offering and strength selectors.`,
+      );
+      return true;
+    },
+    [commit, session.activeRole, toast],
+  );
+
+  const setUniversityOperatingModel = useCallback(
+    (universityId: string, operatingModel: UniversityOperatingModel) => {
+      if (session.activeRole !== "administrator") {
+        toast(
+          "Classification is protected",
+          "Only the HEC Calendar Administrator may change a university operating model.",
+        );
+        return false;
+      }
+      const university = session.universityProfiles.find(
+        (item) => item.id === universityId,
+      );
+      if (!university) return false;
+      commit((current) => ({
+        ...current,
+        universityProfiles: current.universityProfiles.map((item) =>
+          item.id === universityId ? { ...item, operatingModel } : item,
+        ),
+        demoAuditEntries: [
+          {
+            id: `operating-model-${Date.now()}`,
+            action: "University operating model updated",
+            actor: "Leela Krishnan",
+            actorRole: "HEC Calendar Administrator",
+            scope: university.name,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail:
+              "The classification changed without altering existing delivery units, offerings or calendar records.",
+            previousValue: university.operatingModel,
+            newValue: operatingModel,
+            workflowStage: "HEC Institution Registry",
+            reference: university.id,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        "Operating model updated",
+        `${university.name} is now classified as ${operatingModel.replaceAll("_", " ")}.`,
+      );
+      return true;
+    },
+    [commit, session.activeRole, session.universityProfiles, toast],
   );
 
   const setSelectedProgramme = useCallback(
@@ -1077,6 +1185,8 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       setCalendarMilestoneActive,
       saveCourseMaster,
       setCourseMasterActive,
+      saveAcademicDeliveryUnit,
+      setUniversityOperatingModel,
       setSelectedProgramme,
       setSelectedSemester,
       setRequestStatus,
@@ -1110,6 +1220,8 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       setCalendarMilestoneActive,
       saveCourseMaster,
       setCourseMasterActive,
+      saveAcademicDeliveryUnit,
+      setUniversityOperatingModel,
       setSelectedProgramme,
       setSelectedSemester,
       setRequestStatus,
