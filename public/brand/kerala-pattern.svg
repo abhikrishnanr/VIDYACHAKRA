@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 160" role="img" aria-labelledby="title">
+  <title id="title">A subtle Kerala-inspired academic pattern</title>
+  <defs>
+    <pattern id="p" width="92" height="92" patternUnits="userSpaceOnUse">
+      <path d="M46 10c7 14 16 23 30 30-14 7-23 16-30 30-7-14-16-23-30-30 14-7 23-16 30-30Z" fill="none" stroke="#C79A3B" stroke-width="1.2" opacity=".7"/>
+      <circle cx="46" cy="40" r="5.5" fill="none" stroke="#FBF8F1" opacity=".55"/>
+      <path d="M0 86c16-15 30-22 46-22s30 7 46 22" fill="none" stroke="#FBF8F1" stroke-width="1" opacity=".35"/>
+    </pattern>
+    <linearGradient id="fade" x1="0" x2="1">
+      <stop stop-color="#102A43" stop-opacity="0"/>
+      <stop offset=".24" stop-color="#102A43"/>
+      <stop offset=".76" stop-color="#102A43"/>
+      <stop offset="1" stop-color="#102A43" stop-opacity="0"/>
+    </linearGradient>
+    <mask id="m">
+      <rect width="720" height="160" fill="url(#fade)"/>
+    </mask>
+  </defs>
+  <rect width="720" height="160" fill="url(#p)" mask="url(#m)"/>
+</svg>
