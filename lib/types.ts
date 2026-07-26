@@ -23,7 +23,17 @@ export type RequestStatus =
   | "published";
 
 export type PublicationStatus = "draft" | "published" | "locked";
-export type CommitteeDecision = "pending" | "approved" | "returned" | "rejected";
+export type HecRecommendation =
+  | "pending"
+  | "approval"
+  | "rejection"
+  | "clarification";
+export type CommitteeDecision =
+  | "pending"
+  | "approved"
+  | "approved-with-conditions"
+  | "returned"
+  | "rejected";
 export type RevisionPublicationState = "not-started" | "ready" | "published";
 export type RagStatus = "green" | "amber" | "red" | "grey";
 
@@ -42,6 +52,11 @@ export type DemoAuditRecord = {
   scope: string;
   timestamp: string;
   detail: string;
+  actorRole?: string;
+  previousValue?: string;
+  newValue?: string;
+  workflowStage?: string;
+  reference?: string;
 };
 
 export type EventType =
@@ -68,8 +83,15 @@ export type DemoSessionState = {
   completedEventConfirmations: string[];
   completionReports: Record<string, CompletionReport>;
   demoAuditEntries: DemoAuditRecord[];
+  hecRecommendation: HecRecommendation;
+  officerNote: string;
   committeeDecision: CommitteeDecision;
+  committeeCondition: string;
+  committeeMeetingNote: string;
   revisionPublicationState: RevisionPublicationState;
+  publicationSchedule: string;
+  institutionsNotified: boolean;
+  publicCalendarUpdated: boolean;
   bookmarkedEvents: string[];
 };
 

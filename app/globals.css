@@ -2,6 +2,7 @@
 @import "../components/governance/hec-command-centre.css";
 @import "../components/compliance/compliance-matrix.css";
 @import "../components/university/university-workspace.css";
+@import "../components/workflow/governance-workflow.css";
 
 :root {
   --navy: #102a43;

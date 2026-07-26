@@ -89,6 +89,7 @@ function sahyaTheoryStatus(workflow: MatrixWorkflowState) {
   }
   if (
     workflow.committeeDecision === "approved" ||
+    workflow.committeeDecision === "approved-with-conditions" ||
     workflow.requestStatus === "approved"
   ) {
     return {

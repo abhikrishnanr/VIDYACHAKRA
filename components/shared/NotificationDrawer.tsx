@@ -1,6 +1,12 @@
 "use client";
 
-import { AlertTriangle, CalendarDays, CheckCheck, X } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarDays,
+  CheckCheck,
+  CheckCircle2,
+  X,
+} from "lucide-react";
 import { useDemoState } from "@/lib/demo-state";
 
 export function NotificationDrawer({
@@ -10,7 +16,13 @@ export function NotificationDrawer({
   open: boolean;
   onClose: () => void;
 }) {
-  const { notificationCount, setNotificationsRead, requestStatus } = useDemoState();
+  const {
+    notificationCount,
+    setNotificationsRead,
+    requestStatus,
+    revisionPublicationState,
+  } = useDemoState();
+  const published = revisionPublicationState === "published";
   if (!open) return null;
 
   return (
@@ -38,13 +50,20 @@ export function NotificationDrawer({
         >
           <CheckCheck size={15} /> Mark all as read
         </button>
-        <div className="drawer-notification urgent">
-          <span><AlertTriangle size={18} /></span>
+        <div className={`drawer-notification ${published ? "" : "urgent"}`}>
+          <span>
+            {published ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
+          </span>
           <div>
-            <strong>CR-2026-014 needs action</strong>
+            <strong>
+              {published
+                ? "CR-2026-014 is now official"
+                : "CR-2026-014 needs action"}
+            </strong>
             <p>
-              The Semester 1 Theory Examination is seven days beyond the council
-              baseline. Current stage: {requestStatus.replace("-", " ")}.
+              {published
+                ? "Version 1.1 includes the approved Sahya-specific theory examination exception."
+                : `The Semester 1 Theory Examination is seven days beyond the council baseline. Current stage: ${requestStatus.replace("-", " ")}.`}
             </p>
             <small>Today · 11:30</small>
           </div>
@@ -52,8 +71,16 @@ export function NotificationDrawer({
         <div className="drawer-notification">
           <span><CalendarDays size={18} /></span>
           <div>
-            <strong>Version 1.0 remains the active baseline</strong>
-            <p>No approved revision has been published for the examination window.</p>
+            <strong>
+              {published
+                ? "Version 1.1 published and locked"
+                : "Version 1.0 remains the active baseline"}
+            </strong>
+            <p>
+              {published
+                ? "Institutions have been notified and the public calendar is updated."
+                : "No approved revision has been published for the examination window."}
+            </p>
             <small>Today · 10:42</small>
           </div>
         </div>
