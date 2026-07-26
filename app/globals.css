@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "../components/governance/hec-command-centre.css";
 
 :root {
   --navy: #102a43;
