@@ -8,6 +8,7 @@
 @import "../components/masters/master-data-workspace.css";
 @import "../components/institutions/institution-structure.css";
 @import "../components/calendar-submissions/calendar-submissions.css";
+@import "../components/course-offerings/course-offerings.css";
 
 :root {
   --navy: #102a43;

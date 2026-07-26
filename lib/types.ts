@@ -166,12 +166,19 @@ export type CourseOffering = {
   universityId: string;
   deliveryUnitId: string;
   courseMasterId: string;
-  offeringStatus: "draft" | "submitted" | "verified" | "inactive";
+  offeringStatus:
+    | "draft"
+    | "submitted"
+    | "returned"
+    | "verified"
+    | "inactive";
   mode: "in_person" | "blended" | "online";
   shift: "day" | "evening" | "weekend";
   approvalReference: string;
   effectiveFrom: string;
   effectiveTo: string | null;
+  reviewNote: string;
+  lastUpdatedAt: string;
 };
 
 export type CourseBatch = {

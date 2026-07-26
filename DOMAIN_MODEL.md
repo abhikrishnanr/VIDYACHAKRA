@@ -31,8 +31,18 @@ are strongly typed in `lib/types.ts`, realistic defaults live in
   academic year in which teaching commenced.
 - `CourseOffering` joins an academic year, university, delivery unit and active
   HEC Course Master record. Every offering must have a `deliveryUnitId`.
+  The duplicate key is academic year, delivery unit, course, mode and shift.
+  The offering retains approval reference, verification note, status and last
+  update time; the university still cannot create a course name.
 - `CourseBatch` belongs to one course offering and owns its sanctioned capacity.
-  An offering may have one or more batches.
+  An offering may have one or more batches. Total sanctioned capacity is always
+  calculated from active batch rows and is never stored as a separately editable
+  value.
+
+Course offerings progress through draft, submitted, returned or HEC-verified
+states. Once verified, direct capacity editing is blocked; the university can
+record a simulated reconsideration reason without changing the verified batch
+values.
 
 ## Academic calendar submissions
 
@@ -112,7 +122,9 @@ The defaults include:
 - twelve HEC Course Master records;
 - six fictional universities with teaching-only, affiliating and hybrid models;
 - eighteen academic delivery units;
-- twenty-five course offerings with one or two batches;
+- twenty-seven course offerings with one or two batches, including Green
+  Valley College, Sahya University Teaching Campus and Ananthapuri School of
+  Computing capacity examples;
 - admission cohorts and Semester 1–8 strength coverage;
 - high-vacancy, full, not-reported and above-capacity examples; and
 - the original CR-2026-014 calendar deviation.
