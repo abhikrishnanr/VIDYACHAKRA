@@ -1,0 +1,605 @@
+import type {
+  AcademicDeliveryUnit,
+  AcademicYear,
+  CalendarMilestoneDefinition,
+  CourseBatch,
+  CourseMaster,
+  CourseOffering,
+  DemoSessionState,
+  SemesterNumber,
+  SemesterStrengthSnapshot,
+  StudentCohort,
+  UniversityCalendarEntry,
+  UniversityCalendarSubmission,
+  UniversityProfile,
+} from "./types";
+
+export const domainAcademicYears: AcademicYear[] = [
+  {
+    id: "ay-2023-24",
+    label: "2023–24",
+    startDate: "2023-06-01",
+    endDate: "2024-05-31",
+    admissionYear: 2023,
+    status: "closed",
+  },
+  {
+    id: "ay-2024-25",
+    label: "2024–25",
+    startDate: "2024-06-01",
+    endDate: "2025-05-31",
+    admissionYear: 2024,
+    status: "closed",
+  },
+  {
+    id: "ay-2025-26",
+    label: "2025–26",
+    startDate: "2025-06-01",
+    endDate: "2026-05-31",
+    admissionYear: 2025,
+    status: "closed",
+  },
+  {
+    id: "ay-2026-27",
+    label: "2026–27",
+    startDate: "2026-06-01",
+    endDate: "2027-05-31",
+    admissionYear: 2026,
+    status: "active",
+  },
+  {
+    id: "ay-2027-28",
+    label: "2027–28",
+    startDate: "2027-06-01",
+    endDate: "2028-05-31",
+    admissionYear: 2027,
+    status: "planned",
+  },
+];
+
+const allSemesters: SemesterNumber[] = [1, 2, 3, 4, 5, 6, 7, 8];
+
+export const domainCalendarMilestones: CalendarMilestoneDefinition[] = [
+  {
+    id: "cmd-classes",
+    code: "ACAD-CLS-001",
+    title: "Classes Commence",
+    description: "Official commencement of semester instruction.",
+    category: "Academic activity",
+    dateInputType: "single_date",
+    applicableSemesters: allSemesters,
+    applicableProgrammeTypes: ["FYUGP", "Undergraduate"],
+    alignmentRule: "exact_date",
+    toleranceBeforeDays: 0,
+    toleranceAfterDays: 0,
+    mandatory: true,
+    displayOrder: 10,
+    active: true,
+  },
+  {
+    id: "cmd-registration",
+    code: "ACAD-REG-002",
+    title: "Course Registration Deadline",
+    description: "Last approved date for student course registration.",
+    category: "Admission",
+    dateInputType: "deadline",
+    applicableSemesters: allSemesters,
+    applicableProgrammeTypes: ["FYUGP", "Undergraduate"],
+    alignmentRule: "exact_date",
+    toleranceBeforeDays: 0,
+    toleranceAfterDays: 0,
+    mandatory: true,
+    displayOrder: 20,
+    active: true,
+  },
+  {
+    id: "cmd-internal-1",
+    code: "ASSESS-IA1-003",
+    title: "Internal Assessment 1",
+    description: "First common internal assessment window.",
+    category: "Assessment",
+    dateInputType: "date_range",
+    applicableSemesters: allSemesters,
+    applicableProgrammeTypes: ["FYUGP", "Undergraduate"],
+    alignmentRule: "permitted_window",
+    toleranceBeforeDays: 2,
+    toleranceAfterDays: 2,
+    mandatory: true,
+    displayOrder: 30,
+    active: true,
+  },
+  {
+    id: "cmd-internal-2",
+    code: "ASSESS-IA2-004",
+    title: "Internal Assessment 2",
+    description: "Second common internal assessment window.",
+    category: "Assessment",
+    dateInputType: "date_range",
+    applicableSemesters: allSemesters,
+    applicableProgrammeTypes: ["FYUGP", "Undergraduate"],
+    alignmentRule: "permitted_window",
+    toleranceBeforeDays: 2,
+    toleranceAfterDays: 2,
+    mandatory: true,
+    displayOrder: 40,
+    active: true,
+  },
+  {
+    id: "cmd-last-working-day",
+    code: "ACAD-LWD-005",
+    title: "Last Working Day",
+    description: "Official closure of scheduled semester instruction.",
+    category: "Academic activity",
+    dateInputType: "single_date",
+    applicableSemesters: allSemesters,
+    applicableProgrammeTypes: ["FYUGP", "Undergraduate"],
+    alignmentRule: "exact_date",
+    toleranceBeforeDays: 0,
+    toleranceAfterDays: 0,
+    mandatory: true,
+    displayOrder: 50,
+    active: true,
+  },
+  {
+    id: "cmd-practical",
+    code: "EXAM-PRAC-006",
+    title: "Practical Examination",
+    description: "Approved window for laboratory, studio and field examinations.",
+    category: "Examination",
+    dateInputType: "date_range",
+    applicableSemesters: allSemesters,
+    applicableProgrammeTypes: ["FYUGP", "Undergraduate", "Vocational"],
+    alignmentRule: "permitted_window",
+    toleranceBeforeDays: 0,
+    toleranceAfterDays: 3,
+    mandatory: true,
+    displayOrder: 60,
+    active: true,
+  },
+  {
+    id: "cmd-theory",
+    code: "EXAM-THEORY-007",
+    title: "Theory Examination",
+    description: "Official commencement of the common theory examination window.",
+    category: "Examination",
+    dateInputType: "single_date",
+    applicableSemesters: allSemesters,
+    applicableProgrammeTypes: ["FYUGP", "Undergraduate"],
+    alignmentRule: "exact_date",
+    toleranceBeforeDays: 0,
+    toleranceAfterDays: 0,
+    mandatory: true,
+    displayOrder: 70,
+    active: true,
+  },
+  {
+    id: "cmd-valuation",
+    code: "EXAM-VAL-008",
+    title: "Centralised Valuation",
+    description: "Commencement of the approved valuation period.",
+    category: "Valuation",
+    dateInputType: "single_date",
+    applicableSemesters: allSemesters,
+    applicableProgrammeTypes: ["FYUGP", "Undergraduate"],
+    alignmentRule: "permitted_window",
+    toleranceBeforeDays: 0,
+    toleranceAfterDays: 2,
+    mandatory: true,
+    displayOrder: 80,
+    active: true,
+  },
+  {
+    id: "cmd-results",
+    code: "RESULT-PUB-009",
+    title: "Result Publication",
+    description: "Statewide result publication and reporting deadline.",
+    category: "Result",
+    dateInputType: "deadline",
+    applicableSemesters: allSemesters,
+    applicableProgrammeTypes: ["FYUGP", "Undergraduate"],
+    alignmentRule: "reporting_only",
+    toleranceBeforeDays: 0,
+    toleranceAfterDays: 0,
+    mandatory: true,
+    displayOrder: 90,
+    active: true,
+  },
+];
+
+export const domainCourseMasters: CourseMaster[] = [
+  ["cm-ba-eng", "HEC-UG-ENG-001", "B.A. English", "BA English", "Humanities", "Undergraduate", 4, 8],
+  ["cm-ba-eco", "HEC-UG-ECO-002", "B.A. Economics", "BA Economics", "Social Sciences", "Undergraduate", 4, 8],
+  ["cm-bcom", "HEC-UG-COM-003", "B.Com.", "B.Com.", "Commerce", "Undergraduate", 4, 8],
+  ["cm-bcom-fin", "HEC-UG-COM-004", "B.Com. Finance", "B.Com. Finance", "Commerce", "Undergraduate", 4, 8],
+  ["cm-bsc-cs", "HEC-UG-CS-005", "B.Sc. Computer Science", "BSc Computer Science", "Computer Science", "Undergraduate", 4, 8],
+  ["cm-bsc-math", "HEC-UG-MAT-006", "B.Sc. Mathematics", "BSc Mathematics", "Mathematics", "Undergraduate", 4, 8],
+  ["cm-bsc-physics", "HEC-UG-PHY-007", "B.Sc. Physics", "BSc Physics", "Physical Sciences", "Undergraduate", 4, 8],
+  ["cm-bsc-chem", "HEC-UG-CHE-008", "B.Sc. Chemistry", "BSc Chemistry", "Chemical Sciences", "Undergraduate", 4, 8],
+  ["cm-bsc-psych", "HEC-UG-PSY-009", "B.Sc. Psychology", "BSc Psychology", "Behavioural Sciences", "Undergraduate", 4, 8],
+  ["cm-bba", "HEC-UG-MGT-010", "Bachelor of Business Administration", "BBA", "Management", "Undergraduate", 4, 8],
+  ["cm-bsw", "HEC-UG-SWK-011", "Bachelor of Social Work", "BSW", "Social Work", "Undergraduate", 4, 8],
+  ["cm-bvoc-media", "HEC-UG-VOC-012", "B.Voc. Digital Media", "B.Voc. Digital Media", "Digital Media", "Vocational", 3, 6],
+].map(
+  ([
+    id,
+    courseCode,
+    courseName,
+    shortName,
+    discipline,
+    programmeType,
+    durationYears,
+    totalSemesters,
+  ]) => ({
+    id: id as string,
+    courseCode: courseCode as string,
+    courseName: courseName as string,
+    shortName: shortName as string,
+    qualificationLevel: "Undergraduate",
+    discipline: discipline as string,
+    programmeType: programmeType as CourseMaster["programmeType"],
+    durationYears: durationYears as number,
+    totalSemesters: totalSemesters as SemesterNumber,
+    active: true,
+    effectiveFromAcademicYear: "ay-2026-27",
+    description: `${courseName} is an illustrative active HEC Course Master record for the prototype.`,
+  }),
+);
+
+export const domainUniversityProfiles: UniversityProfile[] = [
+  {
+    id: "sahya",
+    name: "Sahya Higher Studies University",
+    shortName: "Sahya University",
+    operatingModel: "hybrid",
+    district: "Thrissur",
+    active: true,
+  },
+  {
+    id: "vembanad",
+    name: "Vembanad Academic University",
+    shortName: "Vembanad University",
+    operatingModel: "affiliating",
+    district: "Kottayam",
+    active: true,
+  },
+  {
+    id: "malabar",
+    name: "Malabar Learning University",
+    shortName: "Malabar University",
+    operatingModel: "affiliating",
+    district: "Kozhikode",
+    active: true,
+  },
+  {
+    id: "periyar",
+    name: "Periyar Valley University",
+    shortName: "Periyar Valley",
+    operatingModel: "hybrid",
+    district: "Idukki",
+    active: true,
+  },
+  {
+    id: "ananthapuri",
+    name: "Ananthapuri University of Studies",
+    shortName: "Ananthapuri University",
+    operatingModel: "teaching_only",
+    district: "Thiruvananthapuram",
+    active: true,
+  },
+  {
+    id: "kuttanad",
+    name: "Kuttanad Knowledge University",
+    shortName: "Kuttanad University",
+    operatingModel: "affiliating",
+    district: "Alappuzha",
+    active: true,
+  },
+];
+
+export const domainAcademicDeliveryUnits: AcademicDeliveryUnit[] = [
+  ["du-sahya-campus", "sahya", "Sahya University Teaching Campus", "Sahya Campus", "university_campus", "Thrissur", "SHSU-CAMP-01"],
+  ["du-sahya-liberal", "sahya", "Sahya College of Liberal Studies", "Sahya Liberal", "affiliated_college", "Thrissur", "SHSU-AFF-01"],
+  ["du-sahya-nilgiri", "sahya", "Nilgiri College of Applied Sciences", "Nilgiri CAS", "affiliated_college", "Palakkad", "SHSU-AFF-02"],
+  ["du-sahya-pamba", "sahya", "Pamba Institute of Commerce", "Pamba Commerce", "affiliated_college", "Pathanamthitta", "SHSU-AFF-03"],
+  ["du-anan-campus", "ananthapuri", "Ananthapuri University Teaching Campus", "Ananthapuri Campus", "university_campus", "Thiruvananthapuram", "AUS-CAMP-01"],
+  ["du-anan-humanities", "ananthapuri", "Department of Humanities and Social Inquiry", "Humanities Department", "university_department", "Thiruvananthapuram", "AUS-DEPT-01"],
+  ["du-anan-sciences", "ananthapuri", "Department of Foundational Sciences", "Sciences Department", "university_department", "Thiruvananthapuram", "AUS-DEPT-02"],
+  ["du-vemb-humanities", "vembanad", "Vembanad College of Humanities", "Vembanad Humanities", "affiliated_college", "Kottayam", "VAU-AFF-01"],
+  ["du-vemb-kumarakom", "vembanad", "Kumarakom School of Sciences", "Kumarakom Sciences", "affiliated_college", "Kottayam", "VAU-AFF-02"],
+  ["du-vemb-lakeview", "vembanad", "Lakeview College of Management", "Lakeview Management", "affiliated_college", "Alappuzha", "VAU-AFF-03"],
+  ["du-malabar-beypore", "malabar", "Beypore College of Arts", "Beypore Arts", "affiliated_college", "Kozhikode", "MLU-AFF-01"],
+  ["du-malabar-kallayi", "malabar", "Kallayi Institute of Technology", "Kallayi Institute", "affiliated_college", "Kozhikode", "MLU-AFF-02"],
+  ["du-periyar-centre", "periyar", "Periyar Centre for Applied Learning", "Periyar Centre", "university_centre", "Idukki", "PVU-CENTRE-01"],
+  ["du-periyar-idukki", "periyar", "Idukki School of Economics and Science", "Idukki School", "constituent_college", "Idukki", "PVU-CONST-01"],
+  ["du-kuttanad-env", "kuttanad", "Kuttanad College of Environmental Studies", "Kuttanad Environmental", "affiliated_college", "Alappuzha", "KKU-AFF-01"],
+].map(([id, universityId, name, shortName, unitType, district, institutionCode]) => ({
+  id: id as string,
+  universityId: universityId as string,
+  name: name as string,
+  shortName: shortName as string,
+  unitType: unitType as AcademicDeliveryUnit["unitType"],
+  district: district as string,
+  institutionCode: institutionCode as string,
+  active: true,
+}));
+
+type OfferingBlueprint = {
+  id: string;
+  universityId: string;
+  deliveryUnitId: string;
+  courseMasterId: string;
+  status?: CourseOffering["offeringStatus"];
+  shift?: CourseOffering["shift"];
+};
+
+const offeringBlueprints: OfferingBlueprint[] = [
+  { id: "off-001", universityId: "sahya", deliveryUnitId: "du-sahya-campus", courseMasterId: "cm-bsc-cs" },
+  { id: "off-002", universityId: "sahya", deliveryUnitId: "du-sahya-campus", courseMasterId: "cm-ba-eco" },
+  { id: "off-003", universityId: "sahya", deliveryUnitId: "du-sahya-liberal", courseMasterId: "cm-ba-eng" },
+  { id: "off-004", universityId: "sahya", deliveryUnitId: "du-sahya-liberal", courseMasterId: "cm-bcom" },
+  { id: "off-005", universityId: "sahya", deliveryUnitId: "du-sahya-nilgiri", courseMasterId: "cm-bsc-cs" },
+  { id: "off-006", universityId: "sahya", deliveryUnitId: "du-sahya-nilgiri", courseMasterId: "cm-bsc-math" },
+  { id: "off-007", universityId: "sahya", deliveryUnitId: "du-sahya-pamba", courseMasterId: "cm-bcom-fin" },
+  { id: "off-008", universityId: "sahya", deliveryUnitId: "du-sahya-pamba", courseMasterId: "cm-bba", shift: "evening" },
+  { id: "off-009", universityId: "ananthapuri", deliveryUnitId: "du-anan-campus", courseMasterId: "cm-ba-eng", status: "submitted" },
+  { id: "off-010", universityId: "ananthapuri", deliveryUnitId: "du-anan-campus", courseMasterId: "cm-bsc-psych" },
+  { id: "off-011", universityId: "ananthapuri", deliveryUnitId: "du-anan-humanities", courseMasterId: "cm-ba-eco" },
+  { id: "off-012", universityId: "ananthapuri", deliveryUnitId: "du-anan-humanities", courseMasterId: "cm-bsw" },
+  { id: "off-013", universityId: "ananthapuri", deliveryUnitId: "du-anan-sciences", courseMasterId: "cm-bsc-physics" },
+  { id: "off-014", universityId: "ananthapuri", deliveryUnitId: "du-anan-sciences", courseMasterId: "cm-bsc-chem" },
+  { id: "off-015", universityId: "vembanad", deliveryUnitId: "du-vemb-humanities", courseMasterId: "cm-ba-eng" },
+  { id: "off-016", universityId: "vembanad", deliveryUnitId: "du-vemb-humanities", courseMasterId: "cm-bcom" },
+  { id: "off-017", universityId: "vembanad", deliveryUnitId: "du-vemb-kumarakom", courseMasterId: "cm-bsc-cs" },
+  { id: "off-018", universityId: "vembanad", deliveryUnitId: "du-vemb-kumarakom", courseMasterId: "cm-bsc-math" },
+  { id: "off-019", universityId: "vembanad", deliveryUnitId: "du-vemb-lakeview", courseMasterId: "cm-bba" },
+  { id: "off-020", universityId: "vembanad", deliveryUnitId: "du-vemb-lakeview", courseMasterId: "cm-bcom-fin", shift: "evening" },
+  { id: "off-021", universityId: "malabar", deliveryUnitId: "du-malabar-beypore", courseMasterId: "cm-bsw" },
+  { id: "off-022", universityId: "malabar", deliveryUnitId: "du-malabar-kallayi", courseMasterId: "cm-bvoc-media" },
+  { id: "off-023", universityId: "periyar", deliveryUnitId: "du-periyar-centre", courseMasterId: "cm-bsc-psych" },
+  { id: "off-024", universityId: "periyar", deliveryUnitId: "du-periyar-idukki", courseMasterId: "cm-bsc-physics" },
+  { id: "off-025", universityId: "kuttanad", deliveryUnitId: "du-kuttanad-env", courseMasterId: "cm-bsc-chem", status: "draft" },
+];
+
+export const domainCourseOfferings: CourseOffering[] = offeringBlueprints.map(
+  (offering, index) => ({
+    id: offering.id,
+    academicYearId: "ay-2026-27",
+    universityId: offering.universityId,
+    deliveryUnitId: offering.deliveryUnitId,
+    courseMasterId: offering.courseMasterId,
+    offeringStatus: offering.status ?? "verified",
+    mode: index === 21 ? "blended" : "in_person",
+    shift: offering.shift ?? "day",
+    approvalReference: `HEC/OFFER/2026/${String(index + 1).padStart(3, "0")}`,
+    effectiveFrom: "2026-06-01",
+    effectiveTo: null,
+  }),
+);
+
+const capacityByOffering: Record<string, number[]> = {
+  "off-001": [60, 60],
+  "off-002": [40],
+  "off-003": [40],
+  "off-004": [48],
+  "off-005": [36, 36],
+  "off-006": [30],
+  "off-007": [60],
+  "off-008": [40],
+  "off-009": [40, 40],
+  "off-010": [30],
+  "off-011": [40],
+  "off-012": [30],
+  "off-013": [24],
+  "off-014": [24],
+  "off-015": [50, 50],
+  "off-016": [60],
+  "off-017": [36],
+  "off-018": [30],
+  "off-019": [50],
+  "off-020": [50],
+  "off-021": [40, 40],
+  "off-022": [30],
+  "off-023": [30, 30],
+  "off-024": [24],
+  "off-025": [30],
+};
+
+export const domainCourseBatches: CourseBatch[] = domainCourseOfferings.flatMap(
+  (offering) =>
+    capacityByOffering[offering.id].map((sanctionedCapacity, index) => ({
+      id: `batch-${offering.id}-${index + 1}`,
+      courseOfferingId: offering.id,
+      batchLabel:
+        capacityByOffering[offering.id].length === 1
+          ? "Regular Batch"
+          : `Batch ${String.fromCharCode(65 + index)}`,
+      sanctionedCapacity,
+      active: true,
+    })),
+);
+
+const semesterCycle: SemesterNumber[] = [
+  1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1,
+];
+
+function admissionYearForSemester(semesterNumber: SemesterNumber) {
+  if (semesterNumber <= 2) return "ay-2026-27";
+  if (semesterNumber <= 4) return "ay-2025-26";
+  if (semesterNumber <= 6) return "ay-2024-25";
+  return "ay-2023-24";
+}
+
+export const domainStudentCohorts: StudentCohort[] = domainCourseOfferings.map(
+  (offering, index) => {
+    const semesterNumber = semesterCycle[index];
+    const admissionYear = admissionYearForSemester(semesterNumber);
+    return {
+      id: `cohort-${offering.id}`,
+      courseOfferingId: offering.id,
+      admissionAcademicYearId: admissionYear,
+      cohortLabel: `${admissionYear.replace("ay-", "")} Admission Cohort`,
+      admissionStatus:
+        offering.id === "off-009"
+          ? "not_started"
+          : semesterNumber === 1
+            ? "in_progress"
+            : "finalised",
+      lastUpdatedAt:
+        offering.id === "off-009" ? null : "2026-07-26T12:30:00.000Z",
+    };
+  },
+);
+
+function reportedStrength(
+  offeringId: string,
+  capacity: number,
+  batchIndex: number,
+) {
+  if (offeringId === "off-001") return Math.floor(capacity * 0.42);
+  if (offeringId === "off-002") return capacity;
+  if (offeringId === "off-004") return capacity + 5;
+  return Math.max(0, capacity - ((batchIndex * 5 + capacity) % 11));
+}
+
+export const domainSemesterStrengthSnapshots: SemesterStrengthSnapshot[] =
+  domainCourseBatches.map((batch, batchIndex) => {
+    const offeringIndex = domainCourseOfferings.findIndex(
+      (offering) => offering.id === batch.courseOfferingId,
+    );
+    const semesterNumber = semesterCycle[offeringIndex];
+    const notReported = batch.courseOfferingId === "off-009";
+    const strength = notReported
+      ? null
+      : reportedStrength(
+          batch.courseOfferingId,
+          batch.sanctionedCapacity,
+          batchIndex,
+        );
+    return {
+      id: `snapshot-${batch.id}-s${semesterNumber}`,
+      cohortId: `cohort-${batch.courseOfferingId}`,
+      courseBatchId: batch.id,
+      semesterNumber,
+      sanctionedCapacity: batch.sanctionedCapacity,
+      currentStrength: strength,
+      admissionIntake:
+        semesterNumber === 1 ? strength : Math.max(0, batch.sanctionedCapacity - 2),
+      reportingDate: "2026-07-26",
+      reportingStatus: notReported
+        ? "not_started"
+        : batchIndex % 6 === 0
+          ? "submitted"
+          : "verified",
+      remarks:
+        batch.courseOfferingId === "off-001"
+          ? "High Semester 1 admission vacancy requires monitoring."
+          : batch.courseOfferingId === "off-004"
+            ? "Above approved capacity: additional reported students require verification."
+            : notReported
+              ? "The teaching unit has not started strength reporting."
+              : "Student strength reported for the current semester.",
+      updatedAt: notReported ? null : "2026-07-26T12:30:00.000Z",
+    };
+  });
+
+export const domainCalendarSubmissions: UniversityCalendarSubmission[] = [
+  ["cal-sub-sahya-26", "sahya", "1.0", "locked", "all_delivery_units"],
+  ["cal-sub-vembanad-26", "vembanad", "1.0", "accepted", "all_delivery_units"],
+  ["cal-sub-malabar-26", "malabar", "1.0", "accepted", "all_delivery_units"],
+  ["cal-sub-periyar-26", "periyar", "0.9", "under_review", "selected_delivery_units"],
+  ["cal-sub-anan-26", "ananthapuri", "1.0", "accepted", "university_teaching_only"],
+  ["cal-sub-kuttanad-26", "kuttanad", "0.8", "submitted", "all_delivery_units"],
+].map(([id, universityId, version, status, scopeType]) => ({
+  id: id as string,
+  universityId: universityId as string,
+  academicYearId: "ay-2026-27",
+  programmeType: "FYUGP",
+  version: version as string,
+  status: status as UniversityCalendarSubmission["status"],
+  scopeType: scopeType as UniversityCalendarSubmission["scopeType"],
+  selectedDeliveryUnitIds:
+    scopeType === "selected_delivery_units"
+      ? ["du-periyar-centre", "du-periyar-idukki"]
+      : [],
+  submittedAt: "2026-07-18T10:00:00.000Z",
+  reviewedAt:
+    status === "accepted" || status === "locked"
+      ? "2026-07-21T15:30:00.000Z"
+      : null,
+  lockedAt: status === "locked" ? "2026-07-22T09:00:00.000Z" : null,
+}));
+
+const baselineDates: Record<
+  string,
+  { start: string; end: string | null }
+> = {
+  "cmd-classes": { start: "2026-08-03", end: null },
+  "cmd-registration": { start: "2026-08-14", end: null },
+  "cmd-internal-1": { start: "2026-09-21", end: "2026-09-25" },
+  "cmd-internal-2": { start: "2026-10-19", end: "2026-10-23" },
+  "cmd-last-working-day": { start: "2026-11-13", end: null },
+  "cmd-practical": { start: "2026-11-25", end: "2026-12-02" },
+  "cmd-theory": { start: "2026-12-05", end: null },
+  "cmd-valuation": { start: "2026-12-19", end: null },
+  "cmd-results": { start: "2027-01-20", end: null },
+};
+
+export const domainCalendarEntries: UniversityCalendarEntry[] =
+  domainCalendarSubmissions.flatMap((submission) =>
+    domainCalendarMilestones.map((milestone) => {
+      const baseline = baselineDates[milestone.id];
+      const sahyaTheory =
+        submission.universityId === "sahya" && milestone.id === "cmd-theory";
+      return {
+        id: `entry-${submission.universityId}-${milestone.id}`,
+        submissionId: submission.id,
+        milestoneDefinitionId: milestone.id,
+        semester: 1,
+        councilBaselineStartDate: baseline.start,
+        councilBaselineEndDate: baseline.end,
+        universityStartDate: sahyaTheory ? "2026-12-12" : baseline.start,
+        universityEndDate: baseline.end,
+        actualStartDate: null,
+        actualEndDate: null,
+        varianceDays: sahyaTheory ? 7 : 0,
+        ragStatus: sahyaTheory ? "red" : "green",
+        ragReason: sahyaTheory
+          ? "Unauthorised seven-day examination deviation; CR-2026-014 remains in draft in the initial scenario."
+          : milestone.alignmentRule === "reporting_only"
+            ? "Reporting milestone recorded against the Council calendar."
+            : "University date aligns with the approved Council baseline.",
+        deviationReason: sahyaTheory
+          ? "Severe monsoon disruption affected scheduled academic activities across 18 affiliated colleges."
+          : "",
+        evidenceStatus: sahyaTheory ? "pending" : "not_required",
+        changeRequestId: sahyaTheory ? "CR-2026-014" : null,
+      };
+    }),
+  );
+
+export const defaultDomainState: Pick<
+  DemoSessionState,
+  | "academicYears"
+  | "calendarMilestoneDefinitions"
+  | "courseMasters"
+  | "universityProfiles"
+  | "academicDeliveryUnits"
+  | "universityCalendarSubmissions"
+  | "universityCalendarEntries"
+  | "courseOfferings"
+  | "courseBatches"
+  | "studentCohorts"
+  | "semesterStrengthSnapshots"
+> = {
+  academicYears: domainAcademicYears,
+  calendarMilestoneDefinitions: domainCalendarMilestones,
+  courseMasters: domainCourseMasters,
+  universityProfiles: domainUniversityProfiles,
+  academicDeliveryUnits: domainAcademicDeliveryUnits,
+  universityCalendarSubmissions: domainCalendarSubmissions,
+  universityCalendarEntries: domainCalendarEntries,
+  courseOfferings: domainCourseOfferings,
+  courseBatches: domainCourseBatches,
+  studentCohorts: domainStudentCohorts,
+  semesterStrengthSnapshots: domainSemesterStrengthSnapshots,
+};

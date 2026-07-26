@@ -4,6 +4,7 @@
 @import "../components/university/university-workspace.css";
 @import "../components/workflow/governance-workflow.css";
 @import "../components/executive/executive-dashboard.css";
+@import "../components/domain/domain-placeholder.css";
 
 :root {
   --navy: #102a43;
@@ -3721,8 +3722,12 @@ textarea:focus-visible {
 }
 
 .app-nav {
+  min-height: 0;
   display: grid;
   gap: 3px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 20%) transparent;
 }
 
 .app-nav a {
@@ -3749,6 +3754,7 @@ textarea:focus-visible {
 }
 
 .sidebar-help {
+  flex-shrink: 0;
   margin: auto 5px 0;
   padding: 14px;
   border-top: 1px solid rgb(255 255 255 / 12%);
