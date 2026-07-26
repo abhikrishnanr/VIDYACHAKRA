@@ -11,7 +11,7 @@ export const metadata: Metadata = {
       "Trace every previous value, decision, publication event and official version.",
     images: [
       {
-        url: "/og.png",
+        url: "/og-governance.png",
         width: 1731,
         height: 909,
         alt: "VIDYACHAKRA academic calendar governance workflow",
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "VIDYACHAKRA Governance Audit Trail",
     description: "Trace calendar decisions and version changes without hiding old values.",
-    images: ["/og.png"],
+    images: ["/og-governance.png"],
   },
 };
 

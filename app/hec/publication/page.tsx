@@ -11,7 +11,7 @@ export const metadata: Metadata = {
       "Publish an approved academic calendar revision as a traceable new official version.",
     images: [
       {
-        url: "/og.png",
+        url: "/og-governance.png",
         width: 1731,
         height: 909,
         alt: "VIDYACHAKRA academic calendar governance workflow",
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "VIDYACHAKRA Calendar Publication Desk",
     description: "Controlled publication of approved academic calendar revisions.",
-    images: ["/og.png"],
+    images: ["/og-governance.png"],
   },
 };
 
