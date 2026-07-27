@@ -216,9 +216,17 @@ export function InstitutionStructureDetail({
               <Plus size={16} /> Add delivery unit
             </button>
           ) : workspace === "hec" ? (
-            <Link className="button button-secondary" href="/hec/compliance">
-              View in Compliance Matrix <ArrowRight size={15} />
-            </Link>
+            <>
+              <Link
+                className="button button-secondary"
+                href={`/hec/institutions/${university.id}/capacity`}
+              >
+                Capacity &amp; Intake <GraduationCap size={15} />
+              </Link>
+              <Link className="button button-secondary" href="/hec/compliance">
+                View in Compliance Matrix <ArrowRight size={15} />
+              </Link>
+            </>
           ) : null
         }
       />

@@ -564,7 +564,7 @@ export const domainCourseBatches: CourseBatch[] = domainCourseOfferings.flatMap(
 );
 
 const semesterCycle: SemesterNumber[] = [
-  1, 2, 3, 4, 1, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1,
+  8, 2, 3, 4, 1, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1,
   1, 1,
 ];
 
@@ -635,7 +635,10 @@ export const domainSemesterStrengthSnapshots: SemesterStrengthSnapshot[] =
       const notReported =
         futureSemester ||
         (batch.courseOfferingId === "off-009" &&
-          semesterNumber === currentSemester);
+          semesterNumber === currentSemester) ||
+        (batch.courseOfferingId === "off-021" &&
+          batch.id.endsWith("-2") &&
+          semesterNumber === 1);
       const greenValleyIntake =
         batch.courseOfferingId === "off-005"
           ? batch.id.endsWith("-1")
