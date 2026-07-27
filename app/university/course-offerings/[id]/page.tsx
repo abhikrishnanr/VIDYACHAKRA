@@ -4,7 +4,7 @@ import { CourseOfferingDetail } from "@/components/course-offerings/CourseOfferi
 export const metadata: Metadata = {
   title: "Course Offering Detail",
   description:
-    "Inspect course, delivery-unit, batch capacity and student reporting information.",
+    "Inspect official course, delivery-unit and approval information.",
 };
 
 export default async function UniversityCourseOfferingDetailPage({

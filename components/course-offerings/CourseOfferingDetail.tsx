@@ -2,28 +2,21 @@
 
 import Link from "next/link";
 import {
-  AlertTriangle,
   ArrowLeft,
-  ArrowRight,
-  CheckCircle2,
+  BookOpenCheck,
   CircleAlert,
   ClipboardCheck,
   Copy,
   FileCheck2,
   GraduationCap,
   Landmark,
-  Layers3,
-  LockKeyhole,
   Pencil,
   Send,
   ShieldCheck,
-  Users,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
-import { Modal } from "@/components/shared/Modal";
 import {
-  buildCourseOfferingMetrics,
+  buildCourseOfferingDetails,
   formatOfferingDate,
   offeringStatusLabel,
 } from "@/lib/course-offerings";
@@ -33,35 +26,9 @@ import { unitTypeLabels } from "@/lib/institution-structure";
 export function CourseOfferingDetail({ offeringId }: { offeringId: string }) {
   const state = useDemoState();
   const router = useRouter();
-  const [capacityDialogOpen, setCapacityDialogOpen] = useState(false);
-  const [capacityReason, setCapacityReason] = useState("");
   const offering = state.courseOfferings.find((item) => item.id === offeringId);
 
-  const metric = useMemo(
-    () =>
-      offering
-        ? buildCourseOfferingMetrics({
-            offering,
-            universities: state.universityProfiles,
-            units: state.academicDeliveryUnits,
-            courses: state.courseMasters,
-            batches: state.courseBatches,
-            cohorts: state.studentCohorts,
-            snapshots: state.semesterStrengthSnapshots,
-          })
-        : null,
-    [
-      offering,
-      state.academicDeliveryUnits,
-      state.courseBatches,
-      state.courseMasters,
-      state.semesterStrengthSnapshots,
-      state.studentCohorts,
-      state.universityProfiles,
-    ],
-  );
-
-  if (!offering || !metric) {
+  if (!offering) {
     return (
       <div className="offering-page">
         <section className="offering-not-found">
@@ -76,36 +43,32 @@ export function CourseOfferingDetail({ offeringId }: { offeringId: string }) {
     );
   }
 
+  const details = buildCourseOfferingDetails({
+    offering,
+    universities: state.universityProfiles,
+    units: state.academicDeliveryUnits,
+    courses: state.courseMasters,
+  });
   const academicYear = state.academicYears.find(
     (year) => year.id === offering.academicYearId,
   );
   const editable =
     offering.offeringStatus === "draft" ||
     offering.offeringStatus === "returned";
-  const currentOfferingId = offering.id;
   const audit = state.demoAuditEntries.filter(
     (entry) =>
       entry.reference === offering.id ||
       entry.scope.includes(offering.id) ||
-      entry.scope.includes(metric.course?.courseName ?? "__none__"),
+      entry.scope.includes(details.course?.courseName ?? "__none__"),
   );
 
   function copyNextYear() {
-    const copiedId = state.copyCourseOfferingToNextYear(currentOfferingId);
+    const copiedId = state.copyCourseOfferingToNextYear(offeringId);
     if (copiedId) {
       window.setTimeout(
         () => router.push(`/university/course-offerings/${copiedId}`),
         0,
       );
-    }
-  }
-
-  function recordCapacityReason() {
-    if (
-      state.requestVerifiedCapacityChange(currentOfferingId, capacityReason)
-    ) {
-      setCapacityReason("");
-      setCapacityDialogOpen(false);
     }
   }
 
@@ -119,11 +82,11 @@ export function CourseOfferingDetail({ offeringId }: { offeringId: string }) {
           <span><GraduationCap size={22} /></span>
           <div>
             <p className="offering-kicker">
-              {academicYear?.label} · {metric.course?.courseCode}
+              {academicYear?.label} · {details.course?.courseCode}
             </p>
-            <h1>{metric.course?.courseName}</h1>
+            <h1>{details.course?.courseName}</h1>
             <p>
-              {metric.unit?.name} · {offering.mode.replaceAll("_", " ")} ·{" "}
+              {details.unit?.name} · {offering.mode.replaceAll("_", " ")} ·{" "}
               {offering.shift} shift
             </p>
           </div>
@@ -155,20 +118,6 @@ export function CourseOfferingDetail({ offeringId }: { offeringId: string }) {
               </button>
             </>
           ) : null}
-          {offering.offeringStatus === "verified" ? (
-            <button
-              className="button button-secondary"
-              onClick={() => setCapacityDialogOpen(true)}
-            >
-              <LockKeyhole size={14} /> Request Capacity Update
-            </button>
-          ) : null}
-          <Link
-            className="button button-secondary"
-            href="/university/student-strength"
-          >
-            <Users size={14} /> View Student Strength
-          </Link>
           <button className="button button-secondary" onClick={copyNextYear}>
             <Copy size={14} /> Copy to Next Academic Year
           </button>
@@ -176,13 +125,13 @@ export function CourseOfferingDetail({ offeringId }: { offeringId: string }) {
       </header>
 
       {offering.offeringStatus === "verified" ? (
-        <section className="verified-capacity-banner">
-          <LockKeyhole size={18} />
+        <section className="verified-offering-banner">
+          <ShieldCheck size={18} />
           <div>
-            <strong>HEC-verified sanctioned capacity</strong>
+            <strong>HEC-verified course offering</strong>
             <p>
-              Batch capacities cannot be altered as an ordinary draft edit.
-              Record a reason for simulated HEC reconsideration.
+              The official course, delivery unit and approval reference have
+              been verified for this academic year.
             </p>
           </div>
           <span>{offering.approvalReference}</span>
@@ -204,17 +153,17 @@ export function CourseOfferingDetail({ offeringId }: { offeringId: string }) {
           <span><Landmark size={19} /></span>
           <div>
             <small>Academic delivery unit</small>
-            <strong>{metric.unit?.name}</strong>
+            <strong>{details.unit?.name}</strong>
             <p>
-              {metric.unit ? unitTypeLabels[metric.unit.unitType] : ""} ·{" "}
-              {metric.unit?.institutionCode} · {metric.unit?.district}
+              {details.unit ? unitTypeLabels[details.unit.unitType] : ""} ·{" "}
+              {details.unit?.institutionCode} · {details.unit?.district}
             </p>
           </div>
         </div>
         <div>
           <small>Official course</small>
-          <strong>{metric.course?.courseCode}</strong>
-          <p>{metric.course?.discipline}</p>
+          <strong>{details.course?.courseCode}</strong>
+          <p>{details.course?.discipline}</p>
         </div>
         <div>
           <small>Academic-year offering</small>
@@ -230,75 +179,24 @@ export function CourseOfferingDetail({ offeringId }: { offeringId: string }) {
 
       <div className="offering-detail-layout">
         <main>
-          <section className="offering-detail-panel batch-capacity-panel">
+          <section className="offering-detail-panel offering-definition-panel">
             <header>
               <div>
-                <p>Approved capacity</p>
-                <h2>Batch-level sanctioned seats</h2>
+                <p>Course delivery definition</p>
+                <h2>Offering details</h2>
               </div>
-              <span><Layers3 size={15} /> {metric.batches.length} active batch{metric.batches.length === 1 ? "" : "es"}</span>
+              <BookOpenCheck size={17} />
             </header>
-            <div className="detail-batch-head detail-batch-grid">
-              <span>Batch</span>
-              <span>Status</span>
-              <span>Sanctioned capacity</span>
-            </div>
-            {state.courseBatches
-              .filter((batch) => batch.courseOfferingId === offering.id)
-              .map((batch) => (
-                <div className="detail-batch-row detail-batch-grid" key={batch.id}>
-                  <div>
-                    <strong>{batch.batchLabel}</strong>
-                    <small>{batch.id}</small>
-                  </div>
-                  <span className={`batch-active-label ${batch.active ? "" : "inactive"}`}>
-                    {batch.active ? <CheckCircle2 size={12} /> : <CircleAlert size={12} />}
-                    {batch.active ? "Active approved batch" : "Inactive batch"}
-                  </span>
-                  <strong>{batch.sanctionedCapacity}</strong>
-                </div>
-              ))}
-            <footer>
-              <span>Total sanctioned seats</span>
-              <strong>{metric.totalCapacity}</strong>
-              <small>Calculated from active batch rows</small>
-            </footer>
-          </section>
-
-          <section className="offering-detail-panel semester-strength-panel">
-            <header>
-              <div>
-                <p>Student reporting</p>
-                <h2>Semester strength summary</h2>
-              </div>
-              <Link href="/university/student-strength">
-                Open reporting workspace <ArrowRight size={13} />
-              </Link>
-            </header>
-            {metric.semesterSummaries.length ? (
-              <div className="semester-summary-grid">
-                {metric.semesterSummaries.map((summary) => (
-                  <article key={summary.semester}>
-                    <span>Semester {summary.semester}</span>
-                    <strong>
-                      {summary.reportedStrength === null
-                        ? "Not reported"
-                        : `${summary.reportedStrength} students`}
-                    </strong>
-                    <small>
-                      {summary.sanctionedCapacity} sanctioned ·{" "}
-                      {summary.reportingStatus}
-                    </small>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <div className="offering-report-empty">
-                <CircleAlert size={20} />
-                <strong>No semester strength submitted</strong>
-                <p>The offering exists, but batch-level reporting has not started.</p>
-              </div>
-            )}
+            <dl className="offering-detail-definition">
+              <div><dt>Course name</dt><dd>{details.course?.courseName}</dd></div>
+              <div><dt>Course code</dt><dd>{details.course?.courseCode}</dd></div>
+              <div><dt>Delivery unit</dt><dd>{details.unit?.name}</dd></div>
+              <div><dt>Academic year</dt><dd>{academicYear?.label}</dd></div>
+              <div><dt>Mode</dt><dd>{offering.mode.replaceAll("_", " ")}</dd></div>
+              <div><dt>Shift</dt><dd>{offering.shift}</dd></div>
+              <div><dt>Effective from</dt><dd>{formatOfferingDate(offering.effectiveFrom)}</dd></div>
+              <div><dt>Effective to</dt><dd>{formatOfferingDate(offering.effectiveTo)}</dd></div>
+            </dl>
           </section>
 
           <section className="offering-detail-panel offering-audit-panel">
@@ -317,20 +215,13 @@ export function CourseOfferingDetail({ offeringId }: { offeringId: string }) {
                       id: "default-verified",
                       action:
                         offering.offeringStatus === "verified"
-                          ? "Offering verified against HEC approval"
-                          : "Course offering record created",
+                          ? "Course offering verified"
+                          : "Course offering created",
                       detail:
                         offering.approvalReference ||
                         "Approval reference awaiting confirmation.",
                       timestamp: "26 Jul 2026 · 12:30",
                       actor: "University Academic Administration",
-                    },
-                    {
-                      id: "default-capacity",
-                      action: "Batch capacity recorded",
-                      detail: `${metric.batches.length} batch rows · ${metric.totalCapacity} sanctioned seats.`,
-                      timestamp: "24 Jul 2026 · 15:10",
-                      actor: "University Nodal Office",
                     },
                   ]
               ).map((entry) => (
@@ -348,91 +239,20 @@ export function CourseOfferingDetail({ offeringId }: { offeringId: string }) {
         </main>
 
         <aside>
-          <section className="admission-progress-card">
-            <span><Users size={20} /></span>
-            <p>Semester 1 admission progress</p>
-            <h2>
-              {metric.firstSemesterIntake === null
-                ? "Reporting incomplete"
-                : `${metric.firstSemesterIntake} of ${metric.totalCapacity}`}
-            </h2>
-            <div>
-              <span
-                style={{
-                  width: `${Math.min(100, metric.fillRate ?? 0)}%`,
-                }}
-              />
-            </div>
-            <dl>
-              <div><dt>Sanctioned seats</dt><dd>{metric.totalCapacity}</dd></div>
-              <div><dt>Actual first-semester intake</dt><dd>{metric.firstSemesterIntake ?? "Not reported"}</dd></div>
-              <div><dt>Admission vacancy</dt><dd>{metric.admissionVacancy ?? "Pending report"}</dd></div>
-            </dl>
-            <span className={`seat-utilisation-label ${metric.reportingIncomplete ? "incomplete" : metric.admissionVacancy ? "vacancy" : "full"}`}>
-              {metric.reportingIncomplete ? (
-                <CircleAlert size={13} />
-              ) : metric.admissionVacancy ? (
-                <AlertTriangle size={13} />
-              ) : (
-                <CheckCircle2 size={13} />
-              )}
-              {metric.reportingIncomplete
-                ? "Student reporting incomplete"
-                : metric.admissionVacancy
-                  ? `${metric.admissionVacancy} admission vacancies`
-                  : "Fully admitted"}
-            </span>
-          </section>
-
           <section className="offering-course-profile">
             <span><GraduationCap size={19} /></span>
             <p>Course Master profile</p>
-            <h3>{metric.course?.shortName}</h3>
+            <h3>{details.course?.shortName}</h3>
             <dl>
-              <div><dt>Duration</dt><dd>{metric.course?.durationYears} years</dd></div>
-              <div><dt>Total semesters</dt><dd>{metric.course?.totalSemesters}</dd></div>
-              <div><dt>Programme type</dt><dd>{metric.course?.programmeType}</dd></div>
-              <div><dt>Qualification</dt><dd>{metric.course?.qualificationLevel}</dd></div>
+              <div><dt>Duration</dt><dd>{details.course?.durationYears} years</dd></div>
+              <div><dt>Total semesters</dt><dd>{details.course?.totalSemesters}</dd></div>
+              <div><dt>Programme type</dt><dd>{details.course?.programmeType}</dd></div>
+              <div><dt>Qualification</dt><dd>{details.course?.qualificationLevel}</dd></div>
+              <div><dt>Discipline</dt><dd>{details.course?.discipline}</dd></div>
             </dl>
           </section>
         </aside>
       </div>
-
-      <Modal
-        open={capacityDialogOpen}
-        title="Verified capacity is protected"
-        onClose={() => setCapacityDialogOpen(false)}
-      >
-        <div className="modal-body capacity-change-dialog">
-          <LockKeyhole size={27} />
-          <div>
-            <strong>Sanctioned batch capacity cannot be edited directly.</strong>
-            <p>
-              Record a reason for HEC reconsideration. This prototype keeps the
-              verified values unchanged while adding the reason to the audit trail.
-            </p>
-            <label>
-              <span>Reason for capacity change</span>
-              <textarea
-                value={capacityReason}
-                onChange={(event) => setCapacityReason(event.target.value)}
-                placeholder="Explain the approval or operational basis"
-              />
-            </label>
-          </div>
-        </div>
-        <div className="modal-actions">
-          <button
-            className="button button-secondary"
-            onClick={() => setCapacityDialogOpen(false)}
-          >
-            Cancel
-          </button>
-          <button className="button button-primary" onClick={recordCapacityReason}>
-            Record Reason
-          </button>
-        </div>
-      </Modal>
     </div>
   );
 }

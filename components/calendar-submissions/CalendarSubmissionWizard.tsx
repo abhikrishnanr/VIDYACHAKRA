@@ -33,7 +33,7 @@ import {
   getMilestoneGroup,
   inheritanceSummary,
 } from "@/lib/calendar-submissions";
-import { calculateCalendarCompliance } from "@/lib/domain-calculations";
+import { calculateCalendarCompliance } from "@/lib/calendar-calculations";
 import { domainCalendarBaselineDates } from "@/lib/domain-data";
 import { useDemoState } from "@/lib/demo-state";
 import type {

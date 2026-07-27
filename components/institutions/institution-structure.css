@@ -164,8 +164,8 @@
 .institution-directory-grid {
   display: grid;
   grid-template-columns:
-    minmax(228px, 1.2fr) minmax(150px, 0.7fr) 62px 122px 112px
-    minmax(145px, 0.7fr) 18px;
+    minmax(240px, 1.3fr) minmax(175px, 0.8fr) 88px 145px
+    minmax(155px, 0.75fr) 18px;
   align-items: center;
   gap: 10px;
 }
@@ -269,15 +269,13 @@
 }
 
 .institution-course-count,
-.institution-submission-status,
-.institution-reporting {
+.institution-submission-status {
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
-.institution-course-count strong,
-.institution-reporting strong {
+.institution-course-count strong {
   color: var(--navy);
   font-family: Georgia, "Times New Roman", serif;
   font-size: 17px;
@@ -293,27 +291,10 @@
 }
 
 .institution-course-count small,
-.institution-submission-status small,
-.institution-reporting small {
+.institution-submission-status small {
   margin-top: 3px;
   color: var(--muted);
   font-size: 7px;
-}
-
-.institution-reporting > span {
-  width: 86px;
-  height: 4px;
-  margin-top: 6px;
-  border-radius: 99px;
-  background: #e5e9e7;
-  overflow: hidden;
-}
-
-.institution-reporting i {
-  height: 100%;
-  border-radius: inherit;
-  background: var(--teal);
-  display: block;
 }
 
 .institution-directory-row > svg {
@@ -1147,7 +1128,7 @@
 
 .delivery-monitor-table table {
   width: 100%;
-  min-width: 970px;
+  min-width: 820px;
   border-collapse: collapse;
 }
 
@@ -1240,7 +1221,7 @@
 
   .institution-directory-head,
   .institution-directory-row {
-    min-width: 940px;
+    min-width: 860px;
   }
 
   .structure-identity-band {

@@ -7,7 +7,6 @@ import {
   ArrowRight,
   BookOpenCheck,
   Building2,
-  CalendarCheck2,
   CheckCircle2,
   Edit3,
   GraduationCap,
@@ -87,8 +86,6 @@ export function InstitutionStructureDetail({
     university,
     units: state.academicDeliveryUnits,
     courseOfferings: state.courseOfferings,
-    courseBatches: state.courseBatches,
-    semesterStrengthSnapshots: state.semesterStrengthSnapshots,
     calendarSubmissions: state.universityCalendarSubmissions,
     requestStatus: state.requestStatus,
     masterCalendarVersion: state.masterCalendarVersion,
@@ -145,9 +142,12 @@ export function InstitutionStructureDetail({
     const unitMetrics = getUnitMetrics({
       unit,
       courseOfferings: state.courseOfferings,
-      courseBatches: state.courseBatches,
-      semesterStrengthSnapshots: state.semesterStrengthSnapshots,
     });
+    const unitCourses = unitMetrics.distinctCourseIds
+      .map((courseId) =>
+        state.courseMasters.find((course) => course.id === courseId),
+      )
+      .filter(Boolean);
     const UnitIcon = isCollegeDeliveryUnit(unit) ? Building2 : Landmark;
     return (
       <article className="structure-unit-card" key={unit.id}>
@@ -170,18 +170,13 @@ export function InstitutionStructureDetail({
         <div className="structure-unit-metrics">
           <span>
             <GraduationCap size={14} />
-            <strong>{unitMetrics.offerings.length}</strong>
-            <small>offerings</small>
+            <strong>{unitCourses.length}</strong>
+            <small>courses</small>
           </span>
           <span>
             <BookOpenCheck size={14} />
-            <strong>{unitMetrics.sanctionedCapacity}</strong>
-            <small>capacity</small>
-          </span>
-          <span>
-            <CalendarCheck2 size={14} />
-            <strong>{unitMetrics.reportingPercentage}%</strong>
-            <small>reported</small>
+            <strong>{unitMetrics.verifiedOfferings}</strong>
+            <small>verified</small>
           </span>
         </div>
       </article>
@@ -208,7 +203,7 @@ export function InstitutionStructureDetail({
         description={
           workspace === "hec"
             ? "One institutional hierarchy connecting direct teaching units and colleges to the same course-delivery model."
-            : "Maintain the university campuses, schools and colleges that own course offerings and student reporting."
+            : "Maintain the university campuses, schools and colleges that deliver official HEC courses."
         }
         actions={
           canAdd ? (
@@ -217,11 +212,8 @@ export function InstitutionStructureDetail({
             </button>
           ) : workspace === "hec" ? (
             <>
-              <Link
-                className="button button-secondary"
-                href={`/hec/institutions/${university.id}/capacity`}
-              >
-                Capacity &amp; Intake <GraduationCap size={15} />
+              <Link className="button button-secondary" href="/hec/course-offerings">
+                View Course Offerings <GraduationCap size={15} />
               </Link>
               <Link className="button button-secondary" href="/hec/compliance">
                 View in Compliance Matrix <ArrowRight size={15} />
@@ -389,8 +381,8 @@ export function InstitutionStructureDetail({
           <form className="structure-unit-form" onSubmit={saveUnit}>
             <div className="modal-body">
               <p>
-                The new record becomes a valid owner for course offerings and
-                student-strength reporting.
+                The new record becomes a valid owner for official course
+                offerings and calendar scope.
               </p>
               <div className="form-grid">
                 <label className="form-field form-field-wide">

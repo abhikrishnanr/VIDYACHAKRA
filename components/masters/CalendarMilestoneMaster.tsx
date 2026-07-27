@@ -88,7 +88,7 @@ function FieldPreview({
 
 export function CalendarMilestoneMaster() {
   const state = useDemoState();
-  const canEdit = state.activeRole === "administrator";
+  const canEdit = true;
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>("cmd-theory");

@@ -2,13 +2,10 @@ import type {
   AcademicDeliveryUnit,
   AcademicYear,
   CalendarMilestoneDefinition,
-  CourseBatch,
   CourseMaster,
   CourseOffering,
   DemoSessionState,
   SemesterNumber,
-  SemesterStrengthSnapshot,
-  StudentCohort,
   UniversityCalendarEntry,
   UniversityCalendarSubmission,
   UniversityProfile,
@@ -519,184 +516,6 @@ export const domainCourseOfferings: CourseOffering[] = offeringBlueprints.map(
   }),
 );
 
-const capacityByOffering: Record<string, number[]> = {
-  "off-001": [60, 60],
-  "off-002": [40],
-  "off-003": [40],
-  "off-004": [48],
-  "off-005": [40, 40],
-  "off-006": [30],
-  "off-007": [60],
-  "off-008": [40],
-  "off-009": [40, 40],
-  "off-010": [30],
-  "off-011": [40],
-  "off-012": [30],
-  "off-013": [24],
-  "off-014": [24],
-  "off-015": [50, 50],
-  "off-016": [60],
-  "off-017": [36],
-  "off-018": [30],
-  "off-019": [50],
-  "off-020": [50],
-  "off-021": [40, 40],
-  "off-022": [30],
-  "off-023": [30, 30],
-  "off-024": [24],
-  "off-025": [30],
-  "off-026": [30],
-  "off-027": [50],
-};
-
-export const domainCourseBatches: CourseBatch[] = domainCourseOfferings.flatMap(
-  (offering) =>
-    capacityByOffering[offering.id].map((sanctionedCapacity, index) => ({
-      id: `batch-${offering.id}-${index + 1}`,
-      courseOfferingId: offering.id,
-      batchLabel:
-        capacityByOffering[offering.id].length === 1
-          ? "Regular Batch"
-          : `Batch ${String.fromCharCode(65 + index)}`,
-      sanctionedCapacity,
-      active: true,
-    })),
-);
-
-const semesterCycle: SemesterNumber[] = [
-  8, 2, 3, 4, 1, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1,
-  1, 1,
-];
-
-function admissionYearForSemester(semesterNumber: SemesterNumber) {
-  if (semesterNumber <= 2) return "ay-2026-27";
-  if (semesterNumber <= 4) return "ay-2025-26";
-  if (semesterNumber <= 6) return "ay-2024-25";
-  return "ay-2023-24";
-}
-
-export const domainStudentCohorts: StudentCohort[] = domainCourseOfferings.map(
-  (offering, index) => {
-    const semesterNumber = semesterCycle[index];
-    const admissionYear = admissionYearForSemester(semesterNumber);
-    return {
-      id: `cohort-${offering.id}`,
-      courseOfferingId: offering.id,
-      admissionAcademicYearId: admissionYear,
-      cohortLabel: `${admissionYear.replace("ay-", "")} Admission Cohort`,
-      admissionStatus:
-        offering.id === "off-009"
-          ? "not_started"
-          : semesterNumber === 1
-            ? "in_progress"
-            : "finalised",
-      admissionFinalisedAt:
-        semesterNumber === 1 || offering.id === "off-009"
-          ? null
-          : "2023-08-31T12:00:00.000Z",
-      admissionReopenReason: "",
-      lastUpdatedAt:
-        offering.id === "off-009"
-          ? null
-          : offering.id === "off-005"
-            ? "2026-07-27T16:20:00.000Z"
-            : "2026-07-26T12:30:00.000Z",
-    };
-  },
-);
-
-function reportedStrength(
-  offeringId: string,
-  capacity: number,
-  batchIndex: number,
-) {
-  if (offeringId === "off-001") return Math.floor(capacity * 0.42);
-  if (offeringId === "off-002") return capacity;
-  if (offeringId === "off-004") return capacity + 5;
-  return Math.max(0, capacity - ((batchIndex * 5 + capacity) % 11));
-}
-
-const courseById = new Map(
-  domainCourseMasters.map((course) => [course.id, course]),
-);
-
-export const domainSemesterStrengthSnapshots: SemesterStrengthSnapshot[] =
-  domainCourseBatches.flatMap((batch, batchIndex) => {
-    const offeringIndex = domainCourseOfferings.findIndex(
-      (offering) => offering.id === batch.courseOfferingId,
-    );
-    const offering = domainCourseOfferings[offeringIndex];
-    const currentSemester = semesterCycle[offeringIndex];
-    const totalSemesters =
-      courseById.get(offering.courseMasterId)?.totalSemesters ?? 8;
-    return Array.from({ length: totalSemesters }, (_, offset) => {
-      const semesterNumber = (offset + 1) as SemesterNumber;
-      const futureSemester = semesterNumber > currentSemester;
-      const notReported =
-        futureSemester ||
-        (batch.courseOfferingId === "off-009" &&
-          semesterNumber === currentSemester) ||
-        (batch.courseOfferingId === "off-010" &&
-          semesterNumber === 1) ||
-        (batch.courseOfferingId === "off-021" &&
-          batch.id.endsWith("-2") &&
-          semesterNumber === 1);
-      const greenValleyIntake =
-        batch.courseOfferingId === "off-005"
-          ? batch.id.endsWith("-1")
-            ? 34
-            : 29
-          : null;
-      const baseStrength =
-        greenValleyIntake ??
-        reportedStrength(
-          batch.courseOfferingId,
-          batch.sanctionedCapacity,
-          batchIndex + semesterNumber,
-        );
-      const semesterReduction = Math.max(0, semesterNumber - 1);
-      const strength = notReported
-        ? null
-        : semesterNumber === 1
-          ? baseStrength
-          : Math.max(0, baseStrength - semesterReduction);
-      const updatedAt =
-        batch.courseOfferingId === "off-005" && semesterNumber === 1
-          ? "2026-07-27T16:20:00.000Z"
-          : "2026-07-26T12:30:00.000Z";
-      return {
-        id: `snapshot-${batch.id}-s${semesterNumber}`,
-        cohortId: `cohort-${batch.courseOfferingId}`,
-        courseBatchId: batch.id,
-        semesterNumber,
-        sanctionedCapacity: batch.sanctionedCapacity,
-        currentStrength: strength,
-        admissionIntake:
-          semesterNumber === 1
-            ? strength
-            : Math.max(0, baseStrength),
-        reportingDate: notReported ? "" : "2026-07-27",
-        reportingStatus: notReported
-          ? "not_started"
-          : semesterNumber === currentSemester && batchIndex % 5 === 0
-            ? "submitted"
-            : "verified",
-        remarks:
-          batch.courseOfferingId === "off-001" && semesterNumber === 1
-            ? "High Semester 1 admission vacancy requires monitoring."
-            : batch.courseOfferingId === "off-004" &&
-                semesterNumber === currentSemester
-              ? "Above approved capacity: additional reported students require verification."
-              : notReported
-                ? ""
-                : semesterNumber === 1
-                  ? "Semester 1 admission intake reported by batch."
-                  : "Current active student strength reported for the semester.",
-        updatedAt: notReported ? null : updatedAt,
-      };
-    });
-  });
-
 export const domainCalendarSubmissions: UniversityCalendarSubmission[] = [
   ["cal-sub-sahya-26", "sahya", "1.0", "locked", "all_delivery_units"],
   ["cal-sub-vembanad-26", "vembanad", "1.0", "accepted", "all_delivery_units"],
@@ -798,9 +617,6 @@ export const defaultDomainState: Pick<
   | "universityCalendarSubmissions"
   | "universityCalendarEntries"
   | "courseOfferings"
-  | "courseBatches"
-  | "studentCohorts"
-  | "semesterStrengthSnapshots"
 > = {
   academicYears: domainAcademicYears,
   calendarMilestoneDefinitions: domainCalendarMilestones,
@@ -810,7 +626,4 @@ export const defaultDomainState: Pick<
   universityCalendarSubmissions: domainCalendarSubmissions,
   universityCalendarEntries: domainCalendarEntries,
   courseOfferings: domainCourseOfferings,
-  courseBatches: domainCourseBatches,
-  studentCohorts: domainStudentCohorts,
-  semesterStrengthSnapshots: domainSemesterStrengthSnapshots,
 };

@@ -56,11 +56,6 @@ export const roleDefinitions: Record<DemoRoleId, DemoRoleDefinition> = {
         href: "/university/course-offerings",
         icon: "course",
       },
-      {
-        label: "Student Strength",
-        href: "/university/student-strength",
-        icon: "students",
-      },
       { label: "Report Completion", href: "/university/completion", icon: "compliance" },
       { label: "Change Requests", href: "/university/change-requests", icon: "request" },
       { label: "Delivery Network", href: "/university/colleges", icon: "institution" },
@@ -89,11 +84,6 @@ export const roleDefinitions: Record<DemoRoleId, DemoRoleDefinition> = {
         href: "/hec/course-offerings",
         icon: "course",
       },
-      {
-        label: "Student Strength",
-        href: "/hec/student-strength",
-        icon: "students",
-      },
       { label: "Institution Registry", href: "/hec/institutions", icon: "institution" },
       {
         label: "Academic Years",
@@ -110,8 +100,6 @@ export const roleDefinitions: Record<DemoRoleId, DemoRoleDefinition> = {
         href: "/hec/masters/courses",
         icon: "course",
       },
-      { label: "Admission Intake", href: "/hec/admissions", icon: "admission" },
-      { label: "Vacancy Monitor", href: "/hec/vacancies", icon: "vacancy" },
       { label: "Change Requests", href: "/hec/requests", icon: "request" },
       { label: "Calendar Versions", href: "/hec/versions", icon: "version" },
       { label: "Reports", href: "/hec/reports", icon: "report" },

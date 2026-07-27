@@ -4,7 +4,7 @@ import { CourseOfferingForm } from "@/components/course-offerings/CourseOffering
 export const metadata: Metadata = {
   title: "Create Course Offering",
   description:
-    "Bind an official HEC course to an academic delivery unit and configure approved batches.",
+    "Bind an official HEC course to an academic delivery unit.",
 };
 
 export default function NewCourseOfferingPage() {

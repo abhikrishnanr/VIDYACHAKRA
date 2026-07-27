@@ -24,8 +24,6 @@ import {
   Scale,
   ShieldCheck,
   SignpostBig,
-  UserPlus,
-  Users,
   UsersRound,
   X,
 } from "lucide-react";
@@ -57,10 +55,7 @@ const navIcons: Record<RoleNavigationItem["icon"], typeof LayoutDashboard> = {
   audit: FileClock,
   master: LibraryBig,
   course: Landmark,
-  admission: UserPlus,
-  vacancy: AlertTriangle,
   structure: Network,
-  students: Users,
 };
 
 const profiles: Record<

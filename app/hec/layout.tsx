@@ -12,7 +12,8 @@ export default function HECLayout({ children }: { children: ReactNode }) {
   const isInstitutionRoute = pathname.startsWith("/hec/institutions");
   const role =
     pathname.startsWith("/hec/publication") ||
-    ((isMasterRoute || isInstitutionRoute) &&
+    isMasterRoute ||
+    (isInstitutionRoute &&
       activeRole === "administrator")
       ? "administrator"
       : "monitoring";

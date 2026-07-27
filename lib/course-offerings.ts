@@ -1,117 +1,23 @@
-import {
-  calculateFillRate,
-  calculateSemesterOneAdmissionVacancy,
-  calculateTotalSanctionedIntake,
-} from "./domain-calculations";
 import type {
   AcademicDeliveryUnit,
-  CourseBatch,
   CourseMaster,
   CourseOffering,
-  SemesterNumber,
-  SemesterStrengthSnapshot,
-  StudentCohort,
   UniversityProfile,
 } from "./types";
 
-export type CourseOfferingMetrics = {
+export type CourseOfferingDetails = {
   offering: CourseOffering;
   university: UniversityProfile | undefined;
   unit: AcademicDeliveryUnit | undefined;
   course: CourseMaster | undefined;
-  batches: CourseBatch[];
-  snapshots: SemesterStrengthSnapshot[];
-  cohorts: StudentCohort[];
-  totalCapacity: number;
-  firstSemesterIntake: number | null;
-  admissionVacancy: number | null;
-  reportingIncomplete: boolean;
-  fillRate: number | null;
-  semesterSummaries: Array<{
-    semester: SemesterNumber;
-    sanctionedCapacity: number;
-    reportedStrength: number | null;
-    reportingStatus: string;
-  }>;
 };
 
-export function buildCourseOfferingMetrics(input: {
+export function buildCourseOfferingDetails(input: {
   offering: CourseOffering;
   universities: UniversityProfile[];
   units: AcademicDeliveryUnit[];
   courses: CourseMaster[];
-  batches: CourseBatch[];
-  cohorts: StudentCohort[];
-  snapshots: SemesterStrengthSnapshot[];
-}): CourseOfferingMetrics {
-  const batches = input.batches.filter(
-    (batch) =>
-      batch.courseOfferingId === input.offering.id && batch.active,
-  );
-  const batchIds = new Set(batches.map((batch) => batch.id));
-  const cohorts = input.cohorts.filter(
-    (cohort) => cohort.courseOfferingId === input.offering.id,
-  );
-  const cohortIds = new Set(cohorts.map((cohort) => cohort.id));
-  const snapshots = input.snapshots.filter(
-    (snapshot) =>
-      batchIds.has(snapshot.courseBatchId) ||
-      cohortIds.has(snapshot.cohortId),
-  );
-  const firstSemester = snapshots.filter(
-    (snapshot) => snapshot.semesterNumber === 1,
-  );
-  const totalCapacity = calculateTotalSanctionedIntake(batches);
-  const hasCompleteFirstSemester =
-    batches.length > 0 &&
-    batches.every((batch) =>
-      firstSemester.some(
-        (snapshot) =>
-          snapshot.courseBatchId === batch.id &&
-          snapshot.admissionIntake !== null &&
-          snapshot.reportingStatus !== "not_started",
-      ),
-    );
-  const firstSemesterIntake = hasCompleteFirstSemester
-    ? firstSemester.reduce(
-        (total, snapshot) => total + (snapshot.admissionIntake ?? 0),
-        0,
-      )
-    : null;
-
-  const semesterSummaries = Array.from(
-    new Set(snapshots.map((snapshot) => snapshot.semesterNumber)),
-  )
-    .sort((a, b) => a - b)
-    .map((semester) => {
-      const semesterSnapshots = snapshots.filter(
-        (snapshot) => snapshot.semesterNumber === semester,
-      );
-      const reported = semesterSnapshots.filter(
-        (snapshot) =>
-          snapshot.currentStrength !== null &&
-          snapshot.reportingStatus !== "not_started",
-      );
-      return {
-        semester,
-        sanctionedCapacity: semesterSnapshots.reduce(
-          (total, snapshot) => total + snapshot.sanctionedCapacity,
-          0,
-        ),
-        reportedStrength:
-          reported.length === semesterSnapshots.length
-            ? reported.reduce(
-                (total, snapshot) => total + (snapshot.currentStrength ?? 0),
-                0,
-              )
-            : null,
-        reportingStatus:
-          reported.length === semesterSnapshots.length
-            ? "Reported"
-            : "Incomplete",
-      };
-    });
-
+}): CourseOfferingDetails {
   return {
     offering: input.offering,
     university: input.universities.find(
@@ -123,45 +29,21 @@ export function buildCourseOfferingMetrics(input: {
     course: input.courses.find(
       (course) => course.id === input.offering.courseMasterId,
     ),
-    batches,
-    snapshots,
-    cohorts,
-    totalCapacity,
-    firstSemesterIntake,
-    admissionVacancy:
-      firstSemesterIntake === null
-        ? null
-        : calculateSemesterOneAdmissionVacancy(
-            totalCapacity,
-            firstSemesterIntake,
-          ),
-    reportingIncomplete: !hasCompleteFirstSemester,
-    fillRate:
-      firstSemesterIntake === null
-        ? null
-        : calculateFillRate(firstSemesterIntake, totalCapacity),
-    semesterSummaries,
   };
 }
 
-export function buildAllCourseOfferingMetrics(input: {
+export function buildAllCourseOfferingDetails(input: {
   offerings: CourseOffering[];
   universities: UniversityProfile[];
   units: AcademicDeliveryUnit[];
   courses: CourseMaster[];
-  batches: CourseBatch[];
-  cohorts: StudentCohort[];
-  snapshots: SemesterStrengthSnapshot[];
 }) {
   return input.offerings.map((offering) =>
-    buildCourseOfferingMetrics({
+    buildCourseOfferingDetails({
       offering,
       universities: input.universities,
       units: input.units,
       courses: input.courses,
-      batches: input.batches,
-      cohorts: input.cohorts,
-      snapshots: input.snapshots,
     }),
   );
 }

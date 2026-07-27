@@ -16,7 +16,6 @@ import type {
   CalendarMilestoneDefinition,
   CommitteeDecision,
   CompletionReport,
-  CourseBatch,
   CourseMaster,
   CourseOffering,
   DemoRoleId,
@@ -26,7 +25,6 @@ import type {
   RequestStatus,
   RevisionPublicationState,
   Semester,
-  StrengthReportUpdate,
   UniversityCalendarEntry,
   UniversityCalendarSubmission,
   UniversityOperatingModel,
@@ -36,7 +34,7 @@ import { findDuplicateOffering } from "./course-offerings";
 
 type Toast = { id: number; title: string; message: string };
 
-export const DEMO_STATE_VERSION = 11;
+export const DEMO_STATE_VERSION = 12;
 
 export const initialDemoState: DemoSessionState = {
   demoStateVersion: DEMO_STATE_VERSION,
@@ -92,10 +90,7 @@ type DemoStateContextValue = DemoSessionState & {
     universityId: string,
     operatingModel: UniversityOperatingModel,
   ) => boolean;
-  saveCourseOffering: (
-    record: CourseOffering,
-    batches: CourseBatch[],
-  ) => boolean;
+  saveCourseOffering: (record: CourseOffering) => boolean;
   submitCourseOffering: (id: string) => boolean;
   reviewCourseOffering: (
     id: string,
@@ -103,13 +98,6 @@ type DemoStateContextValue = DemoSessionState & {
     note: string,
   ) => boolean;
   copyCourseOfferingToNextYear: (id: string) => string | null;
-  requestVerifiedCapacityChange: (id: string, reason: string) => boolean;
-  saveStrengthReports: (updates: StrengthReportUpdate[]) => boolean;
-  setCohortAdmissionStatus: (
-    cohortId: string,
-    status: "in_progress" | "finalised",
-    reason?: string,
-  ) => boolean;
   saveUniversityCalendarSubmission: (
     record: UniversityCalendarSubmission,
     entries: UniversityCalendarEntry[],
@@ -177,9 +165,6 @@ const domainCollectionKeys = [
   "universityCalendarSubmissions",
   "universityCalendarEntries",
   "courseOfferings",
-  "courseBatches",
-  "studentCohorts",
-  "semesterStrengthSnapshots",
 ] as const;
 
 function migrateDemoState(stored: Partial<DemoSessionState>): DemoSessionState {
@@ -194,6 +179,10 @@ function migrateDemoState(stored: Partial<DemoSessionState>): DemoSessionState {
         ? stored.completionReports
         : initialDemoState.completionReports,
   };
+  const migratedRecord = migrated as unknown as Record<string, unknown>;
+  delete migratedRecord.courseBatches;
+  delete migratedRecord.studentCohorts;
+  delete migratedRecord.semesterStrengthSnapshots;
 
   for (const key of domainCollectionKeys) {
     if (!Array.isArray(stored[key])) {
@@ -246,68 +235,6 @@ function migrateDemoState(stored: Partial<DemoSessionState>): DemoSessionState {
           "2026-07-26T12:30:00.000Z",
       };
     });
-    migrated.courseBatches = migrated.courseBatches.map((batch) =>
-      batch.courseOfferingId === "off-005"
-        ? { ...batch, sanctionedCapacity: 40 }
-        : batch,
-    );
-    const migratedBatchCapacity = new Map(
-      migrated.courseBatches.map((batch) => [
-        batch.id,
-        batch.sanctionedCapacity,
-      ]),
-    );
-    migrated.semesterStrengthSnapshots =
-      migrated.semesterStrengthSnapshots.map((snapshot) => ({
-        ...snapshot,
-        sanctionedCapacity:
-          migratedBatchCapacity.get(snapshot.courseBatchId) ??
-          snapshot.sanctionedCapacity,
-        ...(snapshot.courseBatchId.startsWith("batch-off-005-")
-          ? {
-              semesterNumber: 1 as const,
-              admissionIntake: snapshot.currentStrength,
-            }
-          : {}),
-      }));
-    migrated.studentCohorts = migrated.studentCohorts.map((cohort) =>
-      ({
-        ...cohort,
-        admissionFinalisedAt: cohort.admissionFinalisedAt ?? null,
-        admissionReopenReason: cohort.admissionReopenReason ?? "",
-        ...(cohort.courseOfferingId === "off-001"
-          ? (initialDemoState.studentCohorts.find(
-              (item) => item.id === cohort.id,
-            ) ?? {})
-          : {}),
-        ...(cohort.courseOfferingId === "off-005"
-          ? {
-              admissionAcademicYearId: "ay-2026-27",
-              cohortLabel: "2026-27 Admission Cohort",
-              admissionStatus: "in_progress" as const,
-              admissionFinalisedAt: null,
-            }
-          : {}),
-      }),
-    );
-    const defaultStrengthById = new Map(
-      initialDemoState.semesterStrengthSnapshots.map((snapshot) => [
-        snapshot.id,
-        snapshot,
-      ]),
-    );
-    migrated.semesterStrengthSnapshots =
-      migrated.semesterStrengthSnapshots.map((snapshot) =>
-        (snapshot.courseBatchId.startsWith("batch-off-001-") ||
-          snapshot.courseBatchId.startsWith("batch-off-010-") ||
-          snapshot.courseBatchId.startsWith("batch-off-005-") ||
-          snapshot.courseBatchId === "batch-off-021-2") &&
-        (snapshot.courseBatchId.startsWith("batch-off-001-") ||
-          snapshot.courseBatchId.startsWith("batch-off-010-") ||
-          snapshot.semesterNumber === 1)
-          ? (defaultStrengthById.get(snapshot.id) ?? snapshot)
-          : snapshot,
-      );
     const defaultSubmissions = new Map(
       initialDemoState.universityCalendarSubmissions.map((item) => [
         item.id,
@@ -423,7 +350,9 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
     [commit, toast],
   );
 
-  const masterAdminAllowed = session.activeRole === "administrator";
+  // Prototype review mode: master-data actions are temporarily available
+  // without enforcing the administrator workspace check.
+  const masterAdminAllowed = true;
 
   const denyMasterMutation = useCallback(() => {
     toast(
@@ -787,7 +716,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       }));
       toast(
         "Delivery unit added",
-        `${record.name} is now available to course-offering and strength selectors.`,
+        `${record.name} is now available to course-offering and calendar-scope selectors.`,
       );
       return true;
     },
@@ -840,7 +769,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
   );
 
   const saveCourseOffering = useCallback(
-    (record: CourseOffering, batches: CourseBatch[]) => {
+    (record: CourseOffering) => {
       if (session.activeRole !== "university") {
         toast(
           "University action required",
@@ -871,28 +800,13 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
         );
         return false;
       }
-      if (
-        !batches.length ||
-        batches.some(
-          (batch) =>
-            !batch.batchLabel.trim() ||
-            !Number.isFinite(batch.sanctionedCapacity) ||
-            batch.sanctionedCapacity <= 0,
-        )
-      ) {
-        toast(
-          "Approved batch details required",
-          "Add at least one named batch with a positive sanctioned capacity.",
-        );
-        return false;
-      }
       const existing = session.courseOfferings.find(
         (item) => item.id === record.id,
       );
       if (existing?.offeringStatus === "verified") {
         toast(
-          "Verified capacity is protected",
-          "Record a capacity-change reason for HEC instead of editing verified batches directly.",
+          "Verified offering is protected",
+          "HEC-verified course offerings cannot be edited as ordinary drafts.",
         );
         return false;
       }
@@ -905,31 +819,6 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
               item.id === record.id ? savedRecord : item,
             )
           : [savedRecord, ...current.courseOfferings],
-        courseBatches: [
-          ...current.courseBatches.filter(
-            (batch) => batch.courseOfferingId !== record.id,
-          ),
-          ...batches.map((batch) => ({
-            ...batch,
-            courseOfferingId: record.id,
-            sanctionedCapacity: Math.round(batch.sanctionedCapacity),
-          })),
-        ],
-        studentCohorts: current.studentCohorts.some(
-          (cohort) => cohort.courseOfferingId === record.id,
-        )
-          ? current.studentCohorts
-          : [
-              {
-                id: `cohort-${record.id}`,
-                courseOfferingId: record.id,
-                admissionAcademicYearId: record.academicYearId,
-                cohortLabel: `${record.academicYearId.replace("ay-", "")} Admission Cohort`,
-                admissionStatus: "not_started",
-                lastUpdatedAt: null,
-              },
-              ...current.studentCohorts,
-            ],
         demoAuditEntries: [
           {
             id: `course-offering-saved-${Date.now()}`,
@@ -940,7 +829,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
             actorRole: "University Academic Administrator",
             scope: `${unit.name} · ${course.courseName}`,
             timestamp: new Date().toLocaleString("en-IN"),
-            detail: `${batches.length} approved batch${batches.length === 1 ? "" : "es"} · ${batches.reduce((total, batch) => total + Math.round(batch.sanctionedCapacity), 0)} sanctioned seats.`,
+            detail: `${course.courseCode} offered by ${unit.name} in ${record.mode.replaceAll("_", " ")} mode.`,
             previousValue: existing?.offeringStatus ?? "No offering",
             newValue: savedRecord.offeringStatus,
             workflowStage: "University Course Offering",
@@ -951,7 +840,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       }));
       toast(
         existing ? "Offering draft updated" : "Course offering created",
-        `${course.courseName} is bound to ${unit.name} with capacity calculated from its batches.`,
+        `${course.courseName} is now linked to ${unit.name}.`,
       );
       return true;
     },
@@ -1004,7 +893,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
             scope: id,
             timestamp: new Date().toLocaleString("en-IN"),
             detail:
-              "Academic context, approval reference and batch-level sanctioned capacity submitted for verification.",
+              "Academic context, official course and approval reference submitted for verification.",
             previousValue: offering.offeringStatus,
             newValue: "Submitted",
             workflowStage: "HEC Course Offering Verification",
@@ -1087,7 +976,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
                 offeringStatus: nextStatus,
                 reviewNote:
                   note.trim() ||
-                  "HEC verified the approval reference and sanctioned batch capacity.",
+                  "HEC verified the official course, delivery unit and approval reference.",
                 lastUpdatedAt: now,
               }
             : item,
@@ -1108,7 +997,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
             timestamp: new Date().toLocaleString("en-IN"),
             detail:
               note.trim() ||
-              "Approval reference and batch-level sanctioned capacity verified.",
+              "Official course, delivery unit and approval reference verified.",
             previousValue: offering.offeringStatus,
             newValue: nextStatus,
             workflowStage: "HEC Course Offering Verification",
@@ -1124,7 +1013,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
             ? "Offering returned"
             : "HEC note recorded",
         action === "verify"
-          ? "The sanctioned batch capacity is now protected."
+          ? "The verified course offering is now protected."
           : "The review record has been updated.",
       );
       return true;
@@ -1177,31 +1066,9 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
         );
         return null;
       }
-      const sourceBatches = session.courseBatches.filter(
-        (batch) => batch.courseOfferingId === id,
-      );
       commit((current) => ({
         ...current,
         courseOfferings: [candidate, ...current.courseOfferings],
-        courseBatches: [
-          ...sourceBatches.map((batch, index) => ({
-            ...batch,
-            id: `batch-${newId}-${index + 1}`,
-            courseOfferingId: newId,
-          })),
-          ...current.courseBatches,
-        ],
-        studentCohorts: [
-          {
-            id: `cohort-${newId}`,
-            courseOfferingId: newId,
-            admissionAcademicYearId: nextYear.id,
-            cohortLabel: `${nextYear.label} Admission Cohort`,
-            admissionStatus: "not_started",
-            lastUpdatedAt: null,
-          },
-          ...current.studentCohorts,
-        ],
         demoAuditEntries: [
           {
             id: `course-offering-copied-${Date.now()}`,
@@ -1210,7 +1077,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
             actorRole: "University Academic Administrator",
             scope: newId,
             timestamp: new Date().toLocaleString("en-IN"),
-            detail: `${sourceBatches.length} batch capacities copied to ${nextYear.label}; approval reference requires reconfirmation.`,
+            detail: `Course delivery details copied to ${nextYear.label}; approval reference requires reconfirmation.`,
             previousValue: `${source.academicYearId} · ${source.offeringStatus}`,
             newValue: `${nextYear.id} · draft`,
             workflowStage: "University Course Offering",
@@ -1221,7 +1088,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       }));
       toast(
         "Offering copied",
-        `${nextYear.label} now has a draft with the previous batch capacities.`,
+        `${nextYear.label} now has a draft course offering.`,
       );
       return newId;
     },
@@ -1229,49 +1096,9 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       commit,
       session.academicYears,
       session.activeRole,
-      session.courseBatches,
       session.courseOfferings,
       toast,
     ],
-  );
-
-  const requestVerifiedCapacityChange = useCallback(
-    (id: string, reason: string) => {
-      if (session.activeRole !== "university" || !reason.trim()) {
-        toast(
-          "Capacity-change reason required",
-          "Explain why the verified sanctioned capacity needs reconsideration.",
-        );
-        return false;
-      }
-      const offering = session.courseOfferings.find((item) => item.id === id);
-      if (!offering || offering.offeringStatus !== "verified") return false;
-      commit((current) => ({
-        ...current,
-        demoAuditEntries: [
-          {
-            id: `capacity-change-request-${Date.now()}`,
-            action: "Verified capacity change reason recorded",
-            actor: "Prof. Anjali Menon",
-            actorRole: "University Academic Administrator",
-            scope: id,
-            timestamp: new Date().toLocaleString("en-IN"),
-            detail: reason.trim(),
-            previousValue: "HEC verified sanctioned capacity",
-            newValue: "Capacity reconsideration note awaiting HEC",
-            workflowStage: "Course Offering Capacity Control",
-            reference: id,
-          },
-          ...current.demoAuditEntries,
-        ],
-      }));
-      toast(
-        "Capacity reason recorded",
-        "The verified capacity remains unchanged until HEC reviews the note.",
-      );
-      return true;
-    },
-    [commit, session.activeRole, session.courseOfferings, toast],
   );
 
   const saveUniversityCalendarSubmission = useCallback(
@@ -1569,314 +1396,6 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       commit,
       session.activeRole,
       session.universityCalendarSubmissions,
-      toast,
-    ],
-  );
-
-  const saveStrengthReports = useCallback(
-    (updates: StrengthReportUpdate[]) => {
-      if (session.activeRole !== "university") {
-        toast(
-          "University reporting action required",
-          "HEC can monitor aggregate figures but cannot alter university-reported student strength.",
-        );
-        return false;
-      }
-      if (!updates.length) {
-        toast("No rows selected", "Select at least one strength row to save.");
-        return false;
-      }
-
-      const validationError = updates.find((update) => {
-        const cohort = session.studentCohorts.find(
-          (item) => item.id === update.cohortId,
-        );
-        const offering = session.courseOfferings.find(
-          (item) => item.id === cohort?.courseOfferingId,
-        );
-        const course = session.courseMasters.find(
-          (item) => item.id === offering?.courseMasterId,
-        );
-        const batch = session.courseBatches.find(
-          (item) =>
-            item.id === update.courseBatchId &&
-            item.courseOfferingId === offering?.id,
-        );
-        return (
-          !cohort ||
-          !offering ||
-          !course ||
-          !batch ||
-          update.semesterNumber > course.totalSemesters ||
-          (update.reportedStrength !== null &&
-            (!Number.isInteger(update.reportedStrength) ||
-              update.reportedStrength < 0))
-        );
-      });
-      if (validationError) {
-        toast(
-          "Strength entries need correction",
-          "Use whole, non-negative numbers and a semester supported by the official Course Master.",
-        );
-        return false;
-      }
-
-      const blockedFinalised = updates.find((update) => {
-        const cohort = session.studentCohorts.find(
-          (item) => item.id === update.cohortId,
-        );
-        if (
-          cohort?.admissionStatus !== "finalised" ||
-          update.semesterNumber !== 1
-        ) {
-          return false;
-        }
-        const existing = session.semesterStrengthSnapshots.find(
-          (snapshot) =>
-            snapshot.cohortId === update.cohortId &&
-            snapshot.courseBatchId === update.courseBatchId &&
-            snapshot.semesterNumber === 1,
-        );
-        return existing?.admissionIntake !== update.reportedStrength;
-      });
-      if (blockedFinalised) {
-        toast(
-          "Admission figure is finalised",
-          "Reopen Semester 1 admission with a reason before changing the final intake.",
-        );
-        return false;
-      }
-
-      const now = new Date().toISOString();
-      const timestamp = new Date().toLocaleString("en-IN");
-      commit((current) => {
-        const nextSnapshots = [...current.semesterStrengthSnapshots];
-        const auditRecords = updates.map((update, index) => {
-          const existingIndex = nextSnapshots.findIndex(
-            (snapshot) =>
-              snapshot.cohortId === update.cohortId &&
-              snapshot.courseBatchId === update.courseBatchId &&
-              snapshot.semesterNumber === update.semesterNumber,
-          );
-          const existing =
-            existingIndex >= 0 ? nextSnapshots[existingIndex] : undefined;
-          const batch = current.courseBatches.find(
-            (item) => item.id === update.courseBatchId,
-          )!;
-          const cohort = current.studentCohorts.find(
-            (item) => item.id === update.cohortId,
-          )!;
-          const offering = current.courseOfferings.find(
-            (item) => item.id === cohort.courseOfferingId,
-          )!;
-          const course = current.courseMasters.find(
-            (item) => item.id === offering.courseMasterId,
-          )!;
-          const unit = current.academicDeliveryUnits.find(
-            (item) => item.id === offering.deliveryUnitId,
-          )!;
-          const previousValue =
-            update.semesterNumber === 1
-              ? existing?.admissionIntake
-              : existing?.currentStrength;
-          const nextSnapshot = {
-            id:
-              existing?.id ??
-              `snapshot-${update.courseBatchId}-s${update.semesterNumber}`,
-            cohortId: update.cohortId,
-            courseBatchId: update.courseBatchId,
-            semesterNumber: update.semesterNumber,
-            sanctionedCapacity: batch.sanctionedCapacity,
-            currentStrength: update.reportedStrength,
-            admissionIntake:
-              update.semesterNumber === 1
-                ? update.reportedStrength
-                : (existing?.admissionIntake ?? null),
-            reportingDate: update.reportingDate,
-            reportingStatus:
-              update.reportedStrength === null
-                ? ("not_started" as const)
-                : update.reportingStatus,
-            remarks: update.remarks.trim(),
-            updatedAt: now,
-          };
-          if (existingIndex >= 0) {
-            nextSnapshots[existingIndex] = nextSnapshot;
-          } else {
-            nextSnapshots.push(nextSnapshot);
-          }
-          return {
-            id: `strength-update-${Date.now()}-${index}`,
-            action:
-              update.semesterNumber === 1
-                ? "Semester 1 admission intake updated"
-                : `Semester ${update.semesterNumber} strength updated`,
-            actor: "Prof. Anjali Menon",
-            actorRole: "University Academic Administrator",
-            scope: `${unit.name} · ${course.courseName} · ${batch.batchLabel}`,
-            timestamp,
-            detail:
-              update.remarks.trim() ||
-              `Aggregate batch figure recorded for Semester ${update.semesterNumber}.`,
-            previousValue:
-              previousValue === null || previousValue === undefined
-                ? "Blank — not reported"
-                : String(previousValue),
-            newValue:
-              update.reportedStrength === null
-                ? "Blank — not reported"
-                : String(update.reportedStrength),
-            workflowStage: "Semester Strength Reporting",
-            reference: `${update.cohortId}/S${update.semesterNumber}`,
-          };
-        });
-        const updatedCohortIds = new Set(
-          updates.map((update) => update.cohortId),
-        );
-        return {
-          ...current,
-          semesterStrengthSnapshots: nextSnapshots,
-          studentCohorts: current.studentCohorts.map((cohort) =>
-            updatedCohortIds.has(cohort.id)
-              ? {
-                  ...cohort,
-                  admissionStatus:
-                    cohort.admissionStatus === "not_started" &&
-                    updates.some(
-                      (update) =>
-                        update.cohortId === cohort.id &&
-                        update.semesterNumber === 1 &&
-                        update.reportedStrength !== null,
-                    )
-                      ? "in_progress"
-                      : cohort.admissionStatus,
-                  lastUpdatedAt: now,
-                }
-              : cohort,
-          ),
-          demoAuditEntries: [...auditRecords, ...current.demoAuditEntries],
-        };
-      });
-      toast(
-        "Student strength saved",
-        `${updates.length} aggregate batch report${updates.length === 1 ? "" : "s"} updated with an audit record.`,
-      );
-      return true;
-    },
-    [
-      commit,
-      session.activeRole,
-      session.courseBatches,
-      session.courseMasters,
-      session.courseOfferings,
-      session.semesterStrengthSnapshots,
-      session.studentCohorts,
-      toast,
-    ],
-  );
-
-  const setCohortAdmissionStatus = useCallback(
-    (
-      cohortId: string,
-      status: "in_progress" | "finalised",
-      reason = "",
-    ) => {
-      if (session.activeRole !== "university") {
-        toast(
-          "University reporting action required",
-          "Only the reporting university can finalise or reopen admission intake.",
-        );
-        return false;
-      }
-      const cohort = session.studentCohorts.find(
-        (item) => item.id === cohortId,
-      );
-      if (!cohort) return false;
-      if (status === "in_progress" && cohort.admissionStatus === "finalised") {
-        if (!reason.trim()) {
-          toast(
-            "Reopening reason required",
-            "Explain why the final Semester 1 intake must be reopened.",
-          );
-          return false;
-        }
-      }
-      if (status === "finalised") {
-        const offeringBatches = session.courseBatches.filter(
-          (batch) =>
-            batch.courseOfferingId === cohort.courseOfferingId && batch.active,
-        );
-        const complete = offeringBatches.every((batch) =>
-          session.semesterStrengthSnapshots.some(
-            (snapshot) =>
-              snapshot.cohortId === cohortId &&
-              snapshot.courseBatchId === batch.id &&
-              snapshot.semesterNumber === 1 &&
-              snapshot.admissionIntake !== null,
-          ),
-        );
-        if (!complete) {
-          toast(
-            "Admission intake is incomplete",
-            "Report a whole-number intake for every active batch before finalising.",
-          );
-          return false;
-        }
-      }
-      const now = new Date().toISOString();
-      commit((current) => ({
-        ...current,
-        studentCohorts: current.studentCohorts.map((item) =>
-          item.id === cohortId
-            ? {
-                ...item,
-                admissionStatus: status,
-                admissionFinalisedAt:
-                  status === "finalised" ? now : null,
-                admissionReopenReason:
-                  status === "in_progress" ? reason.trim() : "",
-                lastUpdatedAt: now,
-              }
-            : item,
-        ),
-        demoAuditEntries: [
-          {
-            id: `admission-status-${Date.now()}`,
-            action:
-              status === "finalised"
-                ? "Semester 1 admission intake finalised"
-                : "Finalised admission intake reopened",
-            actor: "Prof. Anjali Menon",
-            actorRole: "University Academic Administrator",
-            scope: cohort.cohortLabel,
-            timestamp: new Date().toLocaleString("en-IN"),
-            detail:
-              reason.trim() ||
-              "All active batches have reported their final Semester 1 admission intake.",
-            previousValue: cohort.admissionStatus,
-            newValue: status,
-            workflowStage: "Semester 1 Admission Reporting",
-            reference: cohort.id,
-          },
-          ...current.demoAuditEntries,
-        ],
-      }));
-      toast(
-        status === "finalised"
-          ? "Admission intake finalised"
-          : "Admission intake reopened",
-        status === "finalised"
-          ? "Semester 1 figures are now protected until a reason is recorded for reopening."
-          : "Semester 1 figures can be updated again; the reason is preserved in the audit trail.",
-      );
-      return true;
-    },
-    [
-      commit,
-      session.activeRole,
-      session.courseBatches,
-      session.semesterStrengthSnapshots,
-      session.studentCohorts,
       toast,
     ],
   );
@@ -2417,9 +1936,6 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       submitCourseOffering,
       reviewCourseOffering,
       copyCourseOfferingToNextYear,
-      requestVerifiedCapacityChange,
-      saveStrengthReports,
-      setCohortAdmissionStatus,
       saveUniversityCalendarSubmission,
       submitUniversityCalendarSubmission,
       addUniversityCalendarReviewNote,
@@ -2463,9 +1979,6 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       submitCourseOffering,
       reviewCourseOffering,
       copyCourseOfferingToNextYear,
-      requestVerifiedCapacityChange,
-      saveStrengthReports,
-      setCohortAdmissionStatus,
       saveUniversityCalendarSubmission,
       submitUniversityCalendarSubmission,
       addUniversityCalendarReviewNote,
