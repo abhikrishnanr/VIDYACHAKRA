@@ -847,6 +847,8 @@
 .institution-seat-table-wrap {
   max-width: 100%;
   overflow-x: auto;
+  contain: inline-size paint;
+  overscroll-behavior-inline: contain;
 }
 
 .institution-seat-table {
@@ -883,6 +885,38 @@
 }
 
 .institution-seat-table tbody tr:hover td {
+  background: #f7fbf9;
+}
+
+.institution-seat-table th:first-child,
+.institution-seat-table td:first-child {
+  width: 165px;
+  min-width: 165px;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: #fff;
+}
+
+.institution-seat-table th:nth-child(2),
+.institution-seat-table td:nth-child(2) {
+  width: 205px;
+  min-width: 205px;
+  position: sticky;
+  left: 165px;
+  z-index: 2;
+  background: #fff;
+  box-shadow: 1px 0 0 #dfe5e2;
+}
+
+.institution-seat-table thead th:first-child,
+.institution-seat-table thead th:nth-child(2) {
+  z-index: 4;
+  background: #f4f7f5;
+}
+
+.institution-seat-table tbody tr:hover td:first-child,
+.institution-seat-table tbody tr:hover td:nth-child(2) {
   background: #f7fbf9;
 }
 

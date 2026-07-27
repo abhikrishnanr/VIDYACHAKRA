@@ -183,6 +183,8 @@ export function HECCommandCentre() {
     selectedProgramme,
     selectedSemester,
     requestStatus,
+    masterCalendarVersion,
+    revisionPublicationState,
     setAcademicYear,
     setSelectedProgramme,
     setSelectedSemester,
@@ -190,15 +192,55 @@ export function HECCommandCentre() {
   } = useDemoState();
   const [selectedMilestoneId, setSelectedMilestoneId] = useState("theory");
   const [deviationOpen, setDeviationOpen] = useState(false);
+  const revisionPublished = revisionPublicationState === "published";
+  const requestUnderReview = requestStatus !== "draft";
 
+  const effectivePulseMilestones = useMemo(
+    () =>
+      pulseMilestones.map((milestone) => {
+        if (milestone.id !== "theory") return milestone;
+        const sahyaStatus: PulseStatus = revisionPublished
+          ? "aligned"
+          : requestUnderReview
+            ? "attention"
+            : "deviation";
+        return {
+          ...milestone,
+          semester1: revisionPublished
+            ? { aligned: 5, attention: 1, deviation: 0 }
+            : requestUnderReview
+              ? { aligned: 4, attention: 2, deviation: 0 }
+              : milestone.semester1,
+          institutions: milestone.institutions.map((institution) =>
+            institution.name === "Sahya Higher Studies University"
+              ? {
+                  ...institution,
+                  status: sahyaStatus,
+                  note: revisionPublished
+                    ? "Approved exception published · 12 Dec"
+                    : requestUnderReview
+                      ? `CR-2026-014 · ${requestStatus.replace("-", " ")}`
+                      : "+7 days · CR-2026-014 draft",
+                }
+              : institution,
+          ),
+        };
+      }),
+    [requestStatus, requestUnderReview, revisionPublished],
+  );
   const selectedMilestone =
-    pulseMilestones.find((milestone) => milestone.id === selectedMilestoneId) ??
-    pulseMilestones[6];
+    effectivePulseMilestones.find(
+      (milestone) => milestone.id === selectedMilestoneId,
+    ) ?? effectivePulseMilestones[6];
   const distributionKey =
     selectedSemester === "Semester 1" ? "semester1" : "semester3";
   const summary =
     selectedSemester === "Semester 1"
-      ? { aligned: 4, attention: 1, deviations: 1, requests: 2 }
+      ? revisionPublished
+        ? { aligned: 5, attention: 1, deviations: 0, requests: 1 }
+        : requestUnderReview
+          ? { aligned: 4, attention: 2, deviations: 0, requests: 2 }
+          : { aligned: 4, attention: 1, deviations: 1, requests: 2 }
       : { aligned: 5, attention: 1, deviations: 0, requests: 1 };
 
   const visibleInstitutions = useMemo(
@@ -299,16 +341,20 @@ export function HECCommandCentre() {
         </div>
         <div className="publication-lock-version">
           <small>VERSION</small>
-          <strong>1.0</strong>
+          <strong>{masterCalendarVersion}</strong>
         </div>
         <dl>
           <div>
             <dt>Publication date</dt>
-            <dd>15 June 2026</dd>
+            <dd>{revisionPublished ? "02 August 2026" : "15 June 2026"}</dd>
           </div>
           <div>
             <dt>Authority reference</dt>
-            <dd>KSHEC/ACAD/CAL/2026/01</dd>
+            <dd>
+              {revisionPublished
+                ? "KSHEC/ACAD/CAL/2026/01-R1"
+                : "KSHEC/ACAD/CAL/2026/01"}
+            </dd>
           </div>
           <div>
             <dt>Governed milestones</dt>
@@ -337,7 +383,11 @@ export function HECCommandCentre() {
           <span><XCircle size={20} /></span>
           <strong>{summary.deviations}</strong>
           <p>Confirmed deviations</p>
-          <small>{selectedSemester === "Semester 1" ? "Sahya theory examination" : "none in this semester"}</small>
+          <small>
+            {summary.deviations
+              ? "Sahya theory examination"
+              : "none in this semester"}
+          </small>
         </div>
         <div className="requests">
           <span><FileClock size={20} /></span>
@@ -370,7 +420,7 @@ export function HECCommandCentre() {
         </div>
 
         <div className="pulse-timeline" aria-label={`${selectedSemester} academic lifecycle`}>
-          {pulseMilestones.map((milestone, index) => {
+          {effectivePulseMilestones.map((milestone, index) => {
             const distribution = milestone[distributionKey];
             const selected = milestone.id === selectedMilestone.id;
             return (
@@ -452,7 +502,17 @@ export function HECCommandCentre() {
             {[
               ["MLU", "aligned", "north"],
               ["KKU", "attention", "north-centre"],
-              ["SHSU", selectedSemester === "Semester 1" ? "deviation" : "aligned", "centre"],
+              [
+                "SHSU",
+                selectedSemester !== "Semester 1"
+                  ? "aligned"
+                  : revisionPublished
+                    ? "aligned"
+                    : requestUnderReview
+                      ? "attention"
+                      : "deviation",
+                "centre",
+              ],
               ["PVU", "attention", "centre-south"],
               ["VAU", "aligned", "south-centre"],
               ["AUS", "aligned", "south"],
@@ -470,18 +530,43 @@ export function HECCommandCentre() {
       </section>
 
       <div className="command-secondary-grid">
-        <section className="critical-deviation-panel">
+        <section
+          className={`critical-deviation-panel ${revisionPublished ? "resolved" : requestUnderReview ? "under-review" : ""}`}
+        >
           <div className="critical-deviation-head">
-            <span><MessageSquareWarning size={21} /></span>
+            <span>
+              {revisionPublished ? (
+                <CheckCircle2 size={21} />
+              ) : (
+                <MessageSquareWarning size={21} />
+              )}
+            </span>
             <div>
-              <p className="eyebrow">Critical deviation</p>
+              <p className="eyebrow">
+                {revisionPublished
+                  ? "Published calendar decision"
+                  : requestUnderReview
+                    ? "Deviation under governance"
+                    : "Critical deviation"}
+              </p>
               <h2>Semester 1 Theory Examination</h2>
             </div>
-            <span className="critical-status"><XCircle size={13} /> Confirmed deviation</span>
+            <span className="critical-status">
+              {revisionPublished ? (
+                <><CheckCircle2 size={13} /> Approved exception</>
+              ) : requestUnderReview ? (
+                <><AlertTriangle size={13} /> Under review</>
+              ) : (
+                <><XCircle size={13} /> Confirmed deviation</>
+              )}
+            </span>
           </div>
           <p>
-            Sahya Higher Studies University has scheduled the theory examination
-            seven days after the approved Council date.
+            {revisionPublished
+              ? "Sahya Higher Studies University’s seven-day institution-specific exception is covered by published Calendar Version 1.1."
+              : requestUnderReview
+                ? "Sahya Higher Studies University’s seven-day variance is in the formal governance workflow; Version 1.0 remains the official baseline."
+                : "Sahya Higher Studies University has scheduled the theory examination seven days after the approved Council date."}
           </p>
           <dl>
             <div><dt>Variance</dt><dd>+7 days</dd></div>
@@ -490,7 +575,7 @@ export function HECCommandCentre() {
           </dl>
           <div className="critical-actions">
             <button type="button" onClick={() => setDeviationOpen(true)}>
-              Review deviation <ArrowRight size={15} />
+              {revisionPublished ? "Review decision" : "Review deviation"} <ArrowRight size={15} />
             </button>
             <Link href="/hec/compliance">View in Matrix <ChevronRight size={15} /></Link>
           </div>
@@ -524,7 +609,14 @@ export function HECCommandCentre() {
           <Link href="/workflow/agenda?request=CR-2026-014" className="workflow-decision-primary">
             <span>CR-2026-014</span>
             <strong>Sahya Higher Studies University</strong>
-            <small>Theory Examination · Draft evidence assembly</small>
+            <small>
+              Theory Examination ·{" "}
+              {revisionPublished
+                ? "Published in Version 1.1"
+                : requestUnderReview
+                  ? "Controlled workflow active"
+                  : "Draft evidence assembly"}
+            </small>
             <em>{requestStatus.replace("-", " ")}</em>
             <ChevronRight size={17} />
           </Link>
@@ -569,6 +661,9 @@ export function HECCommandCentre() {
         </div>
         <div className="official-activity-rail">
           {[
+            ...(revisionPublished
+              ? [[ShieldCheck, "Calendar revision published", "Version 1.1 locked", "02 Aug · 10:00"]]
+              : []),
             [BookOpenCheck, "Calendar published", "Version 1.0 locked", "15 Jun · 10:42"],
             [Landmark, "Institution adoption", "Vembanad calendar confirmed", "18 Jul · 14:10"],
             [CheckCircle2, "Completion confirmed", "Admission closure recorded", "24 Jul · 17:05"],
@@ -587,7 +682,11 @@ export function HECCommandCentre() {
       </section>
 
       {deviationOpen ? (
-        <DeviationDrawer onClose={() => setDeviationOpen(false)} requestStatus={requestStatus} />
+        <DeviationDrawer
+          onClose={() => setDeviationOpen(false)}
+          requestStatus={requestStatus}
+          revisionPublished={revisionPublished}
+        />
       ) : null}
     </>
   );
@@ -596,9 +695,11 @@ export function HECCommandCentre() {
 function DeviationDrawer({
   onClose,
   requestStatus,
+  revisionPublished,
 }: {
   onClose: () => void;
   requestStatus: string;
+  revisionPublished: boolean;
 }) {
   return (
     <div className="command-drawer-layer">
@@ -611,17 +712,23 @@ function DeviationDrawer({
       <aside role="dialog" aria-modal="true" aria-labelledby="deviation-drawer-title">
         <header>
           <div>
-            <p className="eyebrow">Confirmed calendar deviation</p>
+            <p className="eyebrow">
+              {revisionPublished ? "Published calendar decision" : "Confirmed calendar deviation"}
+            </p>
             <h2 id="deviation-drawer-title">Semester 1 Theory Examination</h2>
           </div>
           <button type="button" aria-label="Close deviation details" onClick={onClose}>
             <X size={20} />
           </button>
         </header>
-        <div className="drawer-deviation-status">
-          <XCircle size={22} />
+        <div className={`drawer-deviation-status ${revisionPublished ? "resolved" : ""}`}>
+          {revisionPublished ? <CheckCircle2 size={22} /> : <XCircle size={22} />}
           <div>
-            <strong>7-day variance from the approved baseline</strong>
+            <strong>
+              {revisionPublished
+                ? "7-day approved institution-specific exception"
+                : "7-day variance from the approved baseline"}
+            </strong>
             <span>Sahya Higher Studies University · 18 affiliated colleges</span>
           </div>
         </div>
@@ -633,22 +740,25 @@ function DeviationDrawer({
         <section>
           <h3>Monitoring explanation</h3>
           <p>
-            Severe monsoon disruption affected scheduled academic activity. The
-            institution has opened a change request but the revised date is not
-            official until committee approval and publication.
+            {revisionPublished
+              ? "The Empowered Committee approved the monsoon-related request with conditions, and the HEC Calendar Administrator published the Sahya-specific date in Version 1.1."
+              : "Severe monsoon disruption affected scheduled academic activity. The institution has opened a change request but the revised date is not official until committee approval and publication."}
           </p>
         </section>
         <dl>
           <div><dt>Request</dt><dd>CR-2026-014</dd></div>
           <div><dt>Current stage</dt><dd>{requestStatus.replace("-", " ")}</dd></div>
-          <div><dt>Authority reference</dt><dd>SHSU/EXAM/CAL/2026/77</dd></div>
+          <div>
+            <dt>Authority reference</dt>
+            <dd>{revisionPublished ? "KSHEC/ACAD/CAL/2026/01-R1" : "SHSU/EXAM/CAL/2026/77"}</dd>
+          </div>
           <div><dt>Downstream impact</dt><dd>Valuation, grade approval and results</dd></div>
         </dl>
         <section>
           <h3>Sample affected colleges</h3>
           <ul>
             <li>Sahya College of Liberal Studies</li>
-            <li>Nilgiri College of Applied Sciences</li>
+            <li>Green Valley College</li>
             <li>Pamba Institute of Commerce</li>
             <li>15 additional affiliated colleges</li>
           </ul>

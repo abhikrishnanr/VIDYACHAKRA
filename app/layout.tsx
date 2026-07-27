@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { DemoStoryControl } from "@/components/shared/DemoStoryControl";
 import { PrototypeIndicator } from "@/components/shared/PrototypeIndicator";
 import { DemoStateProvider } from "@/lib/demo-state";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://vidyachakra.abhikrishnanr.chatgpt.site"),
+  metadataBase: new URL("https://vidyachakra.vercel.app"),
   title: {
     default: "VIDYACHAKRA · Kerala Higher Education Calendar",
     template: "%s · VIDYACHAKRA",
@@ -38,6 +39,7 @@ export default function RootLayout({
       <body>
         <DemoStateProvider>
           {children}
+          <DemoStoryControl />
           <PrototypeIndicator />
         </DemoStateProvider>
       </body>

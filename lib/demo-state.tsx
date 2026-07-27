@@ -36,7 +36,7 @@ import { findDuplicateOffering } from "./course-offerings";
 
 type Toast = { id: number; title: string; message: string };
 
-export const DEMO_STATE_VERSION = 10;
+export const DEMO_STATE_VERSION = 11;
 
 export const initialDemoState: DemoSessionState = {
   demoStateVersion: DEMO_STATE_VERSION,
@@ -299,9 +299,11 @@ function migrateDemoState(stored: Partial<DemoSessionState>): DemoSessionState {
     migrated.semesterStrengthSnapshots =
       migrated.semesterStrengthSnapshots.map((snapshot) =>
         (snapshot.courseBatchId.startsWith("batch-off-001-") ||
+          snapshot.courseBatchId.startsWith("batch-off-010-") ||
           snapshot.courseBatchId.startsWith("batch-off-005-") ||
           snapshot.courseBatchId === "batch-off-021-2") &&
         (snapshot.courseBatchId.startsWith("batch-off-001-") ||
+          snapshot.courseBatchId.startsWith("batch-off-010-") ||
           snapshot.semesterNumber === 1)
           ? (defaultStrengthById.get(snapshot.id) ?? snapshot)
           : snapshot,

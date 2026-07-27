@@ -28,6 +28,12 @@ import {
 } from "@/lib/compliance-matrix-data";
 import { institutions } from "@/lib/demo-data";
 import { useDemoState } from "@/lib/demo-state";
+import {
+  isCollegeDeliveryUnit,
+  isDirectDeliveryUnit,
+  operatingModelLabels,
+  unitTypeLabels,
+} from "@/lib/institution-structure";
 
 type MatrixFocus = "all" | "attention" | "red";
 type MatrixView = "university" | "college";
@@ -45,6 +51,8 @@ export function ComplianceView() {
     requestStatus,
     committeeDecision,
     revisionPublicationState,
+    universityProfiles,
+    academicDeliveryUnits,
     toast,
   } = useDemoState();
   const [query, setQuery] = useState("");
@@ -70,23 +78,28 @@ export function ComplianceView() {
       (category === "all" || milestone.category === category),
   );
 
-  const universityRows = institutions.map((institution) => ({
-    id: institution.id,
-    universityId: institution.id,
-    name: institution.name,
-    secondary: `${institution.region} Kerala · ${institution.colleges.length} sample colleges`,
-    kind: "university" as const,
-  }));
-  const collegeRows = institutions.flatMap((institution) =>
-    institution.colleges.map((college, index) => ({
-      id: `${institution.id}-college-${index}`,
+  const universityRows = universityProfiles.map((institution) => {
+    const units = academicDeliveryUnits.filter(
+      (unit) => unit.universityId === institution.id && unit.active,
+    );
+    return {
+      id: institution.id,
       universityId: institution.id,
-      name: college,
-      secondary: institution.name,
-      kind: "college" as const,
-    })),
-  );
-  const baseRows = view === "university" ? universityRows : collegeRows;
+      name: institution.name,
+      secondary: `${operatingModelLabels[institution.operatingModel]} · ${units.filter(isDirectDeliveryUnit).length} direct / ${units.filter(isCollegeDeliveryUnit).length} college units`,
+      kind: "university" as const,
+    };
+  });
+  const deliveryUnitRows = academicDeliveryUnits
+    .filter((unit) => unit.active)
+    .map((unit) => ({
+      id: unit.id,
+      universityId: unit.universityId,
+      name: unit.name,
+      secondary: `${unitTypeLabels[unit.unitType]} · ${unit.district}`,
+      kind: "unit" as const,
+    }));
+  const baseRows = view === "university" ? universityRows : deliveryUnitRows;
   const rows = baseRows.filter((row) => {
     const matchesSearch = `${row.name} ${row.secondary}`
       .toLowerCase()
@@ -204,7 +217,7 @@ export function ComplianceView() {
             <University size={15} /> University View
           </button>
           <button type="button" className={view === "college" ? "active" : ""} onClick={() => setView("college")}>
-            <Building2 size={15} /> College View
+            <Building2 size={15} /> Delivery Unit View
           </button>
         </div>
       </section>
@@ -229,7 +242,7 @@ export function ComplianceView() {
               <thead>
                 <tr>
                   <th className="matrix-sticky-column">
-                    {view === "university" ? "University" : "Affiliated college"}
+                    {view === "university" ? "University" : "Academic delivery unit"}
                   </th>
                   {visibleMilestones.map((milestone) => (
                     <th key={milestone.id}>

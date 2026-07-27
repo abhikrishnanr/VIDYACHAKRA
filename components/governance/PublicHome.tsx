@@ -59,7 +59,7 @@ export function PublicHome() {
   const [programme, setProgramme] = useState("FYUGP");
   const [semester, setSemester] = useState("All semesters");
   const [university, setUniversity] = useState("All universities");
-  const [college, setCollege] = useState("All colleges");
+  const [deliveryUnit, setDeliveryUnit] = useState("All delivery units");
   const [eventType, setEventType] = useState("All event types");
   const [institutionQuery, setInstitutionQuery] = useState("");
   const [selectedInstitution, setSelectedInstitution] = useState("");
@@ -68,7 +68,7 @@ export function PublicHome() {
     (institution) => institution.name === university,
   );
   const visibleInstitutions = publicInstitutions.filter((institution) =>
-    `${institution.name} ${institution.region} ${institution.colleges.join(" ")}`
+    `${institution.name} ${institution.region} ${institution.operatingModel} ${institution.deliveryUnits.map((unit) => unit.name).join(" ")}`
       .toLowerCase()
       .includes(institutionQuery.toLowerCase()),
   );
@@ -89,7 +89,7 @@ export function PublicHome() {
     if (programme !== "FYUGP") params.set("programme", programme);
     if (semester !== "All semesters") params.set("semester", semester);
     if (university !== "All universities") params.set("university", university);
-    if (college !== "All colleges") params.set("college", college);
+    if (deliveryUnit !== "All delivery units") params.set("unit", deliveryUnit);
     if (eventType !== "All event types") params.set("category", eventType);
     router.push(`/calendar${params.size ? `?${params.toString()}` : ""}`);
   }
@@ -170,7 +170,7 @@ export function PublicHome() {
                 value={university}
                 onChange={(event) => {
                   setUniversity(event.target.value);
-                  setCollege("All colleges");
+                  setDeliveryUnit("All delivery units");
                 }}
               >
                 <option>All universities</option>
@@ -180,13 +180,18 @@ export function PublicHome() {
               </select>
             </label>
             <label>
-              <span>College</span>
-              <select value={college} onChange={(event) => setCollege(event.target.value)}>
-                <option>All colleges</option>
-                {(selectedUniversity?.colleges ??
-                  publicInstitutions.flatMap((institution) => institution.colleges)
-                ).map((collegeName) => (
-                  <option key={collegeName}>{collegeName}</option>
+              <span>College / teaching unit</span>
+              <select
+                value={deliveryUnit}
+                onChange={(event) => setDeliveryUnit(event.target.value)}
+              >
+                <option>All delivery units</option>
+                {(selectedUniversity?.deliveryUnits ??
+                  publicInstitutions.flatMap((institution) => institution.deliveryUnits)
+                ).map((unit) => (
+                  <option key={unit.id} value={unit.name}>
+                    {unit.name} · {unit.type}
+                  </option>
                 ))}
               </select>
             </label>
@@ -390,7 +395,7 @@ export function PublicHome() {
               <p className="portal-section-kicker">Search the network</p>
               <h2>Find Your Institution</h2>
             </div>
-            <p>Choose a fictional university or affiliated college to focus the calendar.</p>
+            <p>Choose a university, college or direct teaching unit to focus the calendar.</p>
           </div>
           <div className="portal-institution-finder">
             <div className="portal-institution-search">
@@ -402,7 +407,7 @@ export function PublicHome() {
                 id="institution-search"
                 value={institutionQuery}
                 onChange={(event) => setInstitutionQuery(event.target.value)}
-                placeholder="Search university or college"
+                placeholder="Search university, college or teaching unit"
               />
             </div>
             <div className="portal-institution-results">
@@ -416,7 +421,9 @@ export function PublicHome() {
                   <span><Landmark size={17} /></span>
                   <div>
                     <strong>{institution.name}</strong>
-                    <small>{institution.region} Kerala · {institution.colleges.length} sample colleges</small>
+                    <small>
+                      {institution.operatingModel} · {institution.structureSummary}
+                    </small>
                   </div>
                   {selectedInstitution === institution.name ? <Check size={17} /> : <ChevronRight size={17} />}
                 </button>

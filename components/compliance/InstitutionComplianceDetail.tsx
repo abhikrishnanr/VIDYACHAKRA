@@ -23,6 +23,12 @@ import {
   type MatrixStatus,
 } from "@/lib/compliance-matrix-data";
 import { useDemoState } from "@/lib/demo-state";
+import {
+  isCollegeDeliveryUnit,
+  isDirectDeliveryUnit,
+  operatingModelLabels,
+  unitTypeLabels,
+} from "@/lib/institution-structure";
 
 const statusMeta = {
   green: { label: "Aligned", Icon: CheckCircle2 },
@@ -37,9 +43,17 @@ export function InstitutionComplianceDetail({ id }: { id: string }) {
     committeeDecision,
     revisionPublicationState,
     completedEventConfirmations,
+    universityProfiles,
+    academicDeliveryUnits,
     toast,
   } = useDemoState();
   const institution = getInstitutionById(id);
+  const universityProfile = universityProfiles.find((item) => item.id === id);
+  const deliveryUnits = academicDeliveryUnits.filter(
+    (unit) => unit.universityId === id && unit.active,
+  );
+  const directUnits = deliveryUnits.filter(isDirectDeliveryUnit);
+  const collegeUnits = deliveryUnits.filter(isCollegeDeliveryUnit);
 
   if (!institution) {
     return (
@@ -71,9 +85,15 @@ export function InstitutionComplianceDetail({ id }: { id: string }) {
         <div className="institution-identity">
           <span><Landmark size={25} /></span>
           <div>
-            <p>{institution.region} Kerala · Participating FYUGP institution</p>
+            <p>{universityProfile?.district ?? institution.region} Kerala · Participating FYUGP institution</p>
             <h1>{institution.name}</h1>
-            <small>Institution code {institution.id.toUpperCase()}-2026 · {institution.colleges.length} sample colleges shown</small>
+            <small>
+              Institution code {institution.id.toUpperCase()}-2026 ·{" "}
+              {universityProfile
+                ? operatingModelLabels[universityProfile.operatingModel]
+                : "University"}{" "}
+              · {deliveryUnits.length} academic delivery units
+            </small>
           </div>
           <div className={`institution-overall-status ${status}`}>
             <StatusIcon size={20} />
@@ -175,17 +195,35 @@ export function InstitutionComplianceDetail({ id }: { id: string }) {
 
         <section className="institution-colleges">
           <div className="institution-section-heading compact">
-            <div><p className="eyebrow">Affiliated network</p><h2>Affiliated Colleges</h2></div>
+            <div><p className="eyebrow">Institution structure</p><h2>Academic Delivery Units</h2></div>
             <Building2 size={19} />
           </div>
-          {institution.colleges.map((college, index) => (
-            <button type="button" onClick={() => toast(college, "College-level milestone reporting is inherited from the university calendar in this demonstration.")} key={college}>
+          {[...directUnits, ...collegeUnits].map((unit, index) => (
+            <button
+              type="button"
+              onClick={() =>
+                toast(
+                  unit.name,
+                  `${unitTypeLabels[unit.unitType]} calendar coverage is inherited from the university calendar in this demonstration.`,
+                )
+              }
+              key={unit.id}
+            >
               <span>{String(index + 1).padStart(2, "0")}</span>
-              <div><strong>{college}</strong><small>FYUGP calendar reporting active</small></div>
+              <div>
+                <strong>{unit.name}</strong>
+                <small>{unitTypeLabels[unit.unitType]} · {unit.district} · FYUGP reporting active</small>
+              </div>
               <ChevronRight size={15} />
             </button>
           ))}
-          <p>{institution.id === "sahya" ? "15 additional affiliated colleges are affected by the open theory-examination request." : "Three representative colleges are shown for this fictional institution."}</p>
+          <p>
+            {universityProfile?.operatingModel === "teaching_only"
+              ? "This teaching university delivers courses through its own campus and departments; no affiliated colleges are shown."
+              : institution.id === "sahya"
+                ? "The prototype shows direct university teaching alongside representative colleges. Fifteen additional affiliated colleges are affected by the open theory-examination request."
+                : `${directUnits.length} direct teaching units and ${collegeUnits.length} representative college units are shown.`}
+          </p>
         </section>
 
         <section className="institution-completions">
