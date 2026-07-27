@@ -7,6 +7,7 @@ import {
   ArrowRight,
   BookOpenCheck,
   Building2,
+  CheckCircle2,
   Edit3,
   GraduationCap,
   Landmark,

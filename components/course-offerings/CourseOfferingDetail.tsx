@@ -63,7 +63,7 @@ export function CourseOfferingDetail({ offeringId }: { offeringId: string }) {
   );
 
   function copyNextYear() {
-    const copiedId = state.copyCourseOfferingToNextYear(offering.id);
+    const copiedId = state.copyCourseOfferingToNextYear(offeringId);
     if (copiedId) {
       window.setTimeout(
         () => router.push(`/university/course-offerings/${copiedId}`),
