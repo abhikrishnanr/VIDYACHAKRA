@@ -1,4 +1,14 @@
-import { academicMilestones, institutions } from "./demo-data";
+import { academicMilestones } from "./demo-data";
+import {
+  domainAcademicDeliveryUnits,
+  domainUniversityProfiles,
+} from "./domain-data";
+import {
+  isCollegeDeliveryUnit,
+  isDirectDeliveryUnit,
+  operatingModelLabels,
+  unitTypeLabels,
+} from "./institution-structure";
 import type { Semester } from "./types";
 
 export type PublicEventCategory =
@@ -64,7 +74,9 @@ export const journeyPhases: JourneyPhase[] = [
   "Results",
 ];
 
-const allInstitutions = institutions.map((institution) => institution.name);
+const allInstitutions = domainUniversityProfiles.map(
+  (institution) => institution.name,
+);
 const programme = "Four Year Undergraduate Programme (FYUGP)";
 
 function categoryFor(eventType: (typeof academicMilestones)[number]["eventType"]) {
@@ -114,8 +126,9 @@ export function getPublicCalendarEvents(revisionPublished: boolean) {
 
   const events: PublicCalendarEvent[] = includedMilestones.map((event) => {
     const isInstitutionSpecific = event.scope.includes("Sahya Higher Studies University");
+    const isSahyaTheory = event.id === "semester-1-theory-examination";
     const isRevisedTheory =
-      revisionPublished && event.id === "semester-1-theory-examination";
+      revisionPublished && isSahyaTheory;
     const date = isRevisedTheory
       ? event.institutionScheduledDate
       : event.councilBaselineDate;
@@ -127,27 +140,41 @@ export function getPublicCalendarEvents(revisionPublished: boolean) {
       councilDate: event.councilBaselineDate,
       programme,
       semester: event.semester,
-      institutions: isInstitutionSpecific
+      institutions: isRevisedTheory
         ? ["Sahya Higher Studies University"]
-        : allInstitutions,
+        : isSahyaTheory
+          ? allInstitutions
+          : isInstitutionSpecific
+            ? ["Sahya Higher Studies University"]
+            : allInstitutions,
       category: isRevisedTheory ? "Official revision" : categoryFor(event.eventType),
       officialVersion: version,
       publicationStatus: isRevisedTheory
         ? "Revised by Empowered Committee"
+        : isSahyaTheory
+          ? "Official"
         : event.changeRequestStatus === "screening"
           ? "Awaiting official confirmation"
           : isInstitutionSpecific
             ? "Approved institution-specific exception"
             : "Official",
-      authorityReference: event.authorityReference,
+      authorityReference: isRevisedTheory
+        ? "KSHEC/ACAD/CAL/2026/01-R1"
+        : isSahyaTheory
+          ? "KSHEC/ACAD/CAL/2026/01"
+          : event.authorityReference,
       revisionHistory: isRevisedTheory
         ? [
             "Version 1.1 · Approved 02 August 2026",
             "Theory examination moved from 05 December to 12 December for Sahya Higher Studies University after severe monsoon disruption.",
           ]
-        : ["No approved revisions to this event."],
+        : isSahyaTheory
+          ? ["Version 1.0 · Published and locked 15 June 2026"]
+          : ["No approved revisions to this event."],
       summary: isRevisedTheory
         ? "The revised date applies to 18 affiliated colleges of Sahya Higher Studies University."
+        : isSahyaTheory
+          ? "The official Council date remains 05 December 2026. An institution-specific change becomes official only after approval and publication."
         : event.ragReason.replace("Unauthorised", "Reported"),
       journeyPhase: journeyFor(event.eventType),
     };
@@ -205,12 +232,38 @@ export function getPublicCalendarEvents(revisionPublished: boolean) {
   return events.sort((left, right) => left.date.localeCompare(right.date));
 }
 
-export const publicInstitutions = institutions.map((institution) => ({
-  id: institution.id,
-  name: institution.name,
-  region: institution.region,
-  colleges: institution.colleges,
-}));
+export const publicInstitutions = domainUniversityProfiles.map((institution) => {
+  const deliveryUnits = domainAcademicDeliveryUnits
+    .filter((unit) => unit.universityId === institution.id && unit.active)
+    .map((unit) => ({
+      id: unit.id,
+      name: unit.name,
+      district: unit.district,
+      type: unitTypeLabels[unit.unitType],
+      direct: isDirectDeliveryUnit(unit),
+    }));
+  const directCount = deliveryUnits.filter((unit) => unit.direct).length;
+  const collegeCount = deliveryUnits.filter((unit) => {
+    const source = domainAcademicDeliveryUnits.find(
+      (candidate) => candidate.id === unit.id,
+    );
+    return source ? isCollegeDeliveryUnit(source) : false;
+  }).length;
+
+  return {
+    id: institution.id,
+    name: institution.name,
+    region: institution.district,
+    operatingModel: operatingModelLabels[institution.operatingModel],
+    deliveryUnits,
+    structureSummary:
+      institution.operatingModel === "teaching_only"
+        ? `${directCount} direct teaching units · no affiliated colleges`
+        : institution.operatingModel === "hybrid"
+          ? `${directCount} direct teaching units · ${collegeCount} representative colleges`
+          : `${collegeCount} representative colleges`,
+  };
+});
 
 export const todayHighlights = {
   date: "Sunday, 26 July 2026",

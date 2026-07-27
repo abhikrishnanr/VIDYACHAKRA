@@ -98,7 +98,7 @@ export function AcademicCalendar() {
   const [programme, setProgramme] = useState("FYUGP");
   const [semester, setSemester] = useState("All semesters");
   const [university, setUniversity] = useState("All universities");
-  const [college, setCollege] = useState("All colleges");
+  const [deliveryUnit, setDeliveryUnit] = useState("All delivery units");
   const [category, setCategory] = useState<
     PublicEventCategory | "All event types"
   >("All event types");
@@ -127,7 +127,7 @@ export function AcademicCalendar() {
       const requestedCategory = params.get("category");
       const requestedSemester = params.get("semester");
       const requestedUniversity = params.get("university");
-      const requestedCollege = params.get("college");
+      const requestedDeliveryUnit = params.get("unit") ?? params.get("college");
       const requestedEvent = params.get("event");
       const requestedPhase = params.get("phase");
 
@@ -139,7 +139,7 @@ export function AcademicCalendar() {
         setSemester(requestedSemester);
       }
       if (requestedUniversity) setUniversity(requestedUniversity);
-      if (requestedCollege) setCollege(requestedCollege);
+      if (requestedDeliveryUnit) setDeliveryUnit(requestedDeliveryUnit);
       if (journeyPhases.includes(requestedPhase as JourneyPhase)) {
         setSelectedPhase(requestedPhase as JourneyPhase);
       }
@@ -156,6 +156,9 @@ export function AcademicCalendar() {
 
   const selectedUniversity = publicInstitutions.find(
     (institution) => institution.name === university,
+  );
+  const selectedDeliveryUnitUniversity = publicInstitutions.find((institution) =>
+    institution.deliveryUnits.some((unit) => unit.name === deliveryUnit),
   );
 
   const filteredEvents = useMemo(() => {
@@ -174,11 +177,11 @@ export function AcademicCalendar() {
         event.semester === semester;
       const matchesUniversity =
         university === "All universities" || event.institutions.includes(university);
-      const matchesCollege =
-        college === "All colleges" ||
-        (selectedUniversity
-          ? event.institutions.includes(selectedUniversity.name)
-          : true);
+      const matchesDeliveryUnit =
+        deliveryUnit === "All delivery units" ||
+        (selectedDeliveryUnitUniversity
+          ? event.institutions.includes(selectedDeliveryUnitUniversity.name)
+          : false);
       const matchesPhase =
         selectedPhase === "All phases" || event.journeyPhase === selectedPhase;
       return (
@@ -186,16 +189,17 @@ export function AcademicCalendar() {
         matchesCategory &&
         matchesSemester &&
         matchesUniversity &&
-        matchesCollege &&
+        matchesDeliveryUnit &&
         matchesPhase
       );
     });
   }, [
     category,
-    college,
+    deliveryUnit,
     events,
     search,
     selectedPhase,
+    selectedDeliveryUnitUniversity,
     selectedUniversity,
     semester,
     university,
@@ -209,7 +213,7 @@ export function AcademicCalendar() {
     search,
     semester !== "All semesters",
     university !== "All universities",
-    college !== "All colleges",
+    deliveryUnit !== "All delivery units",
     category !== "All event types",
     selectedPhase !== "All phases",
   ].filter(Boolean).length;
@@ -220,7 +224,7 @@ export function AcademicCalendar() {
     setProgramme("FYUGP");
     setSemester("All semesters");
     setUniversity("All universities");
-    setCollege("All colleges");
+    setDeliveryUnit("All delivery units");
     setCategory("All event types");
     setSelectedPhase("All phases");
   }
@@ -313,7 +317,7 @@ export function AcademicCalendar() {
               value={university}
               onChange={(event) => {
                 setUniversity(event.target.value);
-                setCollege("All colleges");
+                setDeliveryUnit("All delivery units");
               }}
             >
               <option>All universities</option>
@@ -323,13 +327,18 @@ export function AcademicCalendar() {
             </select>
           </label>
           <label>
-            <span>College</span>
-            <select value={college} onChange={(event) => setCollege(event.target.value)}>
-              <option>All colleges</option>
-              {(selectedUniversity?.colleges ??
-                publicInstitutions.flatMap((institution) => institution.colleges)
-              ).map((collegeName) => (
-                <option key={collegeName}>{collegeName}</option>
+            <span>College / teaching unit</span>
+            <select
+              value={deliveryUnit}
+              onChange={(event) => setDeliveryUnit(event.target.value)}
+            >
+              <option>All delivery units</option>
+              {(selectedUniversity?.deliveryUnits ??
+                publicInstitutions.flatMap((institution) => institution.deliveryUnits)
+              ).map((unit) => (
+                <option key={unit.id} value={unit.name}>
+                  {unit.name} · {unit.type}
+                </option>
               ))}
             </select>
           </label>

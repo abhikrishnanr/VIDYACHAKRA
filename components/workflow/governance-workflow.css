@@ -348,7 +348,13 @@
 .gov-audit-toolbar select:focus { border-color: var(--gov-teal); box-shadow: 0 0 0 3px rgb(22 125 127 / 9%); }
 
 .gov-request-table-wrap,
-.gov-audit-table-wrap { width: 100%; overflow-x: auto; }
+.gov-audit-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  contain: inline-size paint;
+  overscroll-behavior-inline: contain;
+}
 .gov-request-table,
 .gov-audit-table { width: 100%; min-width: 1120px; border-collapse: collapse; font-size: 8px; }
 .gov-request-table th,
@@ -370,6 +376,22 @@
 .gov-request-table td:last-child button,
 .gov-audit-table td:last-child button { width: 29px; height: 29px; border: 1px solid #d3dfdb; border-radius: 5px; background: #fff; color: var(--gov-teal); display: grid; place-items: center; cursor: pointer; }
 .gov-empty-queue { min-height: 130px; color: #73828b; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+
+.gov-request-table th:first-child,
+.gov-request-table td:first-child {
+  width: 170px;
+  min-width: 170px;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: #fff;
+  box-shadow: 1px 0 0 #dfe6e3;
+}
+
+.gov-request-table thead th:first-child {
+  z-index: 4;
+  background: #f5f8f7;
+}
 .gov-empty-queue strong { margin: 8px 0 5px; color: #355363; font-size: 10px; }
 .gov-empty-queue button { border: 0; background: transparent; color: var(--gov-teal); cursor: pointer; font-size: 8px; font-weight: 800; }
 
@@ -702,6 +724,30 @@
 .gov-old-value { background: #f8f2ea; color: #7e6744; }
 .gov-new-value { background: #edf7f2; color: #286b54; }
 .gov-audit-table code { color: #435f6d; font-size: 7px; }
+.gov-audit-table th:first-child,
+.gov-audit-table td:first-child {
+  width: 145px;
+  min-width: 145px;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: #fff;
+}
+.gov-audit-table th:nth-child(2),
+.gov-audit-table td:nth-child(2) {
+  width: 175px;
+  min-width: 175px;
+  position: sticky;
+  left: 145px;
+  z-index: 2;
+  background: #fff;
+  box-shadow: 1px 0 0 #dfe6e3;
+}
+.gov-audit-table thead th:first-child,
+.gov-audit-table thead th:nth-child(2) {
+  z-index: 4;
+  background: #f5f8f7;
+}
 .gov-audit-principle { padding: 12px 14px; border: 1px solid #dfd5c3; border-radius: 7px; background: #faf7f0; color: #98702a; display: flex; align-items: flex-start; gap: 8px; }
 .gov-audit-principle strong { color: #475b62; font-size: 9px; }
 .gov-audit-principle p { margin: 3px 0 0; color: #6f7b7c; font-size: 8px; }

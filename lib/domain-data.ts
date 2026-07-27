@@ -636,6 +636,8 @@ export const domainSemesterStrengthSnapshots: SemesterStrengthSnapshot[] =
         futureSemester ||
         (batch.courseOfferingId === "off-009" &&
           semesterNumber === currentSemester) ||
+        (batch.courseOfferingId === "off-010" &&
+          semesterNumber === 1) ||
         (batch.courseOfferingId === "off-021" &&
           batch.id.endsWith("-2") &&
           semesterNumber === 1);
