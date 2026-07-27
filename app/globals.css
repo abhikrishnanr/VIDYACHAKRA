@@ -10,6 +10,7 @@
 @import "../components/calendar-submissions/calendar-submissions.css";
 @import "../components/course-offerings/course-offerings.css";
 @import "../components/student-strength/student-strength.css";
+@import "../components/capacity-monitor/capacity-monitor.css";
 
 :root {
   --navy: #102a43;

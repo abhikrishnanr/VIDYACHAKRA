@@ -114,6 +114,23 @@ Calendar compliance RAG and seat-utilisation status are different concepts and
 must have separate labels and legends. An on-time calendar does not imply full
 admission, and a seat vacancy does not constitute a calendar violation.
 
+The HEC capacity monitor exposes two explicit modes:
+
+- **Semester 1 Admission Vacancy** = sanctioned capacity minus actual admitted
+  students.
+- **Semester 2–8 Current Strength Gap** = sanctioned capacity minus current
+  reported strength.
+
+These measures are never combined into an unexplained total. Seat-utilisation
+thresholds live in `SEAT_UTILISATION_THRESHOLDS`: 90%–100% is Green, 70% to
+below 90% is Amber, below 70% is Red, intake above capacity is Red, and an
+unreported intake is Grey. Every status includes an icon, label and
+human-readable reason and never uses calendar terms such as “Aligned”.
+
+Institution-level vacancy figures remain restricted to HEC and university
+workspaces. They are not automatically published through the public calendar
+portal.
+
 Reporting completeness is derived from expected and submitted snapshots. A
 missing report remains visible as “Not reported”; it is not converted to a zero
 strength.
