@@ -89,6 +89,11 @@ export const roleDefinitions: Record<DemoRoleId, DemoRoleDefinition> = {
         href: "/hec/course-offerings",
         icon: "course",
       },
+      {
+        label: "Student Strength",
+        href: "/hec/student-strength",
+        icon: "students",
+      },
       { label: "Institution Registry", href: "/hec/institutions", icon: "institution" },
       {
         label: "Academic Years",

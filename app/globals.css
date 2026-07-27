@@ -9,6 +9,7 @@
 @import "../components/institutions/institution-structure.css";
 @import "../components/calendar-submissions/calendar-submissions.css";
 @import "../components/course-offerings/course-offerings.css";
+@import "../components/student-strength/student-strength.css";
 
 :root {
   --navy: #102a43;

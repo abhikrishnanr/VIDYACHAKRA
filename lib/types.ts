@@ -195,6 +195,8 @@ export type StudentCohort = {
   admissionAcademicYearId: string;
   cohortLabel: string;
   admissionStatus: "not_started" | "in_progress" | "finalised";
+  admissionFinalisedAt?: string | null;
+  admissionReopenReason?: string;
   lastUpdatedAt: string | null;
 };
 
@@ -210,6 +212,16 @@ export type SemesterStrengthSnapshot = {
   reportingStatus: "not_started" | "draft" | "submitted" | "verified";
   remarks: string;
   updatedAt: string | null;
+};
+
+export type StrengthReportUpdate = {
+  cohortId: string;
+  courseBatchId: string;
+  semesterNumber: SemesterNumber;
+  reportedStrength: number | null;
+  reportingDate: string;
+  reportingStatus: SemesterStrengthSnapshot["reportingStatus"];
+  remarks: string;
 };
 
 export type RequestStatus =

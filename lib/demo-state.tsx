@@ -26,6 +26,7 @@ import type {
   RequestStatus,
   RevisionPublicationState,
   Semester,
+  StrengthReportUpdate,
   UniversityCalendarEntry,
   UniversityCalendarSubmission,
   UniversityOperatingModel,
@@ -35,7 +36,7 @@ import { findDuplicateOffering } from "./course-offerings";
 
 type Toast = { id: number; title: string; message: string };
 
-export const DEMO_STATE_VERSION = 8;
+export const DEMO_STATE_VERSION = 9;
 
 export const initialDemoState: DemoSessionState = {
   demoStateVersion: DEMO_STATE_VERSION,
@@ -103,6 +104,12 @@ type DemoStateContextValue = DemoSessionState & {
   ) => boolean;
   copyCourseOfferingToNextYear: (id: string) => string | null;
   requestVerifiedCapacityChange: (id: string, reason: string) => boolean;
+  saveStrengthReports: (updates: StrengthReportUpdate[]) => boolean;
+  setCohortAdmissionStatus: (
+    cohortId: string,
+    status: "in_progress" | "finalised",
+    reason?: string,
+  ) => boolean;
   saveUniversityCalendarSubmission: (
     record: UniversityCalendarSubmission,
     entries: UniversityCalendarEntry[],
@@ -264,15 +271,33 @@ function migrateDemoState(stored: Partial<DemoSessionState>): DemoSessionState {
           : {}),
       }));
     migrated.studentCohorts = migrated.studentCohorts.map((cohort) =>
-      cohort.courseOfferingId === "off-005"
-        ? {
-            ...cohort,
-            admissionAcademicYearId: "ay-2026-27",
-            cohortLabel: "2026-27 Admission Cohort",
-            admissionStatus: "in_progress",
-          }
-        : cohort,
+      ({
+        ...cohort,
+        admissionFinalisedAt: cohort.admissionFinalisedAt ?? null,
+        admissionReopenReason: cohort.admissionReopenReason ?? "",
+        ...(cohort.courseOfferingId === "off-005"
+          ? {
+              admissionAcademicYearId: "ay-2026-27",
+              cohortLabel: "2026-27 Admission Cohort",
+              admissionStatus: "in_progress" as const,
+              admissionFinalisedAt: null,
+            }
+          : {}),
+      }),
     );
+    const defaultStrengthById = new Map(
+      initialDemoState.semesterStrengthSnapshots.map((snapshot) => [
+        snapshot.id,
+        snapshot,
+      ]),
+    );
+    migrated.semesterStrengthSnapshots =
+      migrated.semesterStrengthSnapshots.map((snapshot) =>
+        snapshot.courseBatchId.startsWith("batch-off-005-") &&
+        snapshot.semesterNumber === 1
+          ? (defaultStrengthById.get(snapshot.id) ?? snapshot)
+          : snapshot,
+      );
     const defaultSubmissions = new Map(
       initialDemoState.universityCalendarSubmissions.map((item) => [
         item.id,
@@ -1538,6 +1563,314 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
     ],
   );
 
+  const saveStrengthReports = useCallback(
+    (updates: StrengthReportUpdate[]) => {
+      if (session.activeRole !== "university") {
+        toast(
+          "University reporting action required",
+          "HEC can monitor aggregate figures but cannot alter university-reported student strength.",
+        );
+        return false;
+      }
+      if (!updates.length) {
+        toast("No rows selected", "Select at least one strength row to save.");
+        return false;
+      }
+
+      const validationError = updates.find((update) => {
+        const cohort = session.studentCohorts.find(
+          (item) => item.id === update.cohortId,
+        );
+        const offering = session.courseOfferings.find(
+          (item) => item.id === cohort?.courseOfferingId,
+        );
+        const course = session.courseMasters.find(
+          (item) => item.id === offering?.courseMasterId,
+        );
+        const batch = session.courseBatches.find(
+          (item) =>
+            item.id === update.courseBatchId &&
+            item.courseOfferingId === offering?.id,
+        );
+        return (
+          !cohort ||
+          !offering ||
+          !course ||
+          !batch ||
+          update.semesterNumber > course.totalSemesters ||
+          (update.reportedStrength !== null &&
+            (!Number.isInteger(update.reportedStrength) ||
+              update.reportedStrength < 0))
+        );
+      });
+      if (validationError) {
+        toast(
+          "Strength entries need correction",
+          "Use whole, non-negative numbers and a semester supported by the official Course Master.",
+        );
+        return false;
+      }
+
+      const blockedFinalised = updates.find((update) => {
+        const cohort = session.studentCohorts.find(
+          (item) => item.id === update.cohortId,
+        );
+        if (
+          cohort?.admissionStatus !== "finalised" ||
+          update.semesterNumber !== 1
+        ) {
+          return false;
+        }
+        const existing = session.semesterStrengthSnapshots.find(
+          (snapshot) =>
+            snapshot.cohortId === update.cohortId &&
+            snapshot.courseBatchId === update.courseBatchId &&
+            snapshot.semesterNumber === 1,
+        );
+        return existing?.admissionIntake !== update.reportedStrength;
+      });
+      if (blockedFinalised) {
+        toast(
+          "Admission figure is finalised",
+          "Reopen Semester 1 admission with a reason before changing the final intake.",
+        );
+        return false;
+      }
+
+      const now = new Date().toISOString();
+      const timestamp = new Date().toLocaleString("en-IN");
+      commit((current) => {
+        const nextSnapshots = [...current.semesterStrengthSnapshots];
+        const auditRecords = updates.map((update, index) => {
+          const existingIndex = nextSnapshots.findIndex(
+            (snapshot) =>
+              snapshot.cohortId === update.cohortId &&
+              snapshot.courseBatchId === update.courseBatchId &&
+              snapshot.semesterNumber === update.semesterNumber,
+          );
+          const existing =
+            existingIndex >= 0 ? nextSnapshots[existingIndex] : undefined;
+          const batch = current.courseBatches.find(
+            (item) => item.id === update.courseBatchId,
+          )!;
+          const cohort = current.studentCohorts.find(
+            (item) => item.id === update.cohortId,
+          )!;
+          const offering = current.courseOfferings.find(
+            (item) => item.id === cohort.courseOfferingId,
+          )!;
+          const course = current.courseMasters.find(
+            (item) => item.id === offering.courseMasterId,
+          )!;
+          const unit = current.academicDeliveryUnits.find(
+            (item) => item.id === offering.deliveryUnitId,
+          )!;
+          const previousValue =
+            update.semesterNumber === 1
+              ? existing?.admissionIntake
+              : existing?.currentStrength;
+          const nextSnapshot = {
+            id:
+              existing?.id ??
+              `snapshot-${update.courseBatchId}-s${update.semesterNumber}`,
+            cohortId: update.cohortId,
+            courseBatchId: update.courseBatchId,
+            semesterNumber: update.semesterNumber,
+            sanctionedCapacity: batch.sanctionedCapacity,
+            currentStrength: update.reportedStrength,
+            admissionIntake:
+              update.semesterNumber === 1
+                ? update.reportedStrength
+                : (existing?.admissionIntake ?? null),
+            reportingDate: update.reportingDate,
+            reportingStatus:
+              update.reportedStrength === null
+                ? ("not_started" as const)
+                : update.reportingStatus,
+            remarks: update.remarks.trim(),
+            updatedAt: now,
+          };
+          if (existingIndex >= 0) {
+            nextSnapshots[existingIndex] = nextSnapshot;
+          } else {
+            nextSnapshots.push(nextSnapshot);
+          }
+          return {
+            id: `strength-update-${Date.now()}-${index}`,
+            action:
+              update.semesterNumber === 1
+                ? "Semester 1 admission intake updated"
+                : `Semester ${update.semesterNumber} strength updated`,
+            actor: "Prof. Anjali Menon",
+            actorRole: "University Academic Administrator",
+            scope: `${unit.name} · ${course.courseName} · ${batch.batchLabel}`,
+            timestamp,
+            detail:
+              update.remarks.trim() ||
+              `Aggregate batch figure recorded for Semester ${update.semesterNumber}.`,
+            previousValue:
+              previousValue === null || previousValue === undefined
+                ? "Blank — not reported"
+                : String(previousValue),
+            newValue:
+              update.reportedStrength === null
+                ? "Blank — not reported"
+                : String(update.reportedStrength),
+            workflowStage: "Semester Strength Reporting",
+            reference: `${update.cohortId}/S${update.semesterNumber}`,
+          };
+        });
+        const updatedCohortIds = new Set(
+          updates.map((update) => update.cohortId),
+        );
+        return {
+          ...current,
+          semesterStrengthSnapshots: nextSnapshots,
+          studentCohorts: current.studentCohorts.map((cohort) =>
+            updatedCohortIds.has(cohort.id)
+              ? {
+                  ...cohort,
+                  admissionStatus:
+                    cohort.admissionStatus === "not_started" &&
+                    updates.some(
+                      (update) =>
+                        update.cohortId === cohort.id &&
+                        update.semesterNumber === 1 &&
+                        update.reportedStrength !== null,
+                    )
+                      ? "in_progress"
+                      : cohort.admissionStatus,
+                  lastUpdatedAt: now,
+                }
+              : cohort,
+          ),
+          demoAuditEntries: [...auditRecords, ...current.demoAuditEntries],
+        };
+      });
+      toast(
+        "Student strength saved",
+        `${updates.length} aggregate batch report${updates.length === 1 ? "" : "s"} updated with an audit record.`,
+      );
+      return true;
+    },
+    [
+      commit,
+      session.activeRole,
+      session.courseBatches,
+      session.courseMasters,
+      session.courseOfferings,
+      session.semesterStrengthSnapshots,
+      session.studentCohorts,
+      toast,
+    ],
+  );
+
+  const setCohortAdmissionStatus = useCallback(
+    (
+      cohortId: string,
+      status: "in_progress" | "finalised",
+      reason = "",
+    ) => {
+      if (session.activeRole !== "university") {
+        toast(
+          "University reporting action required",
+          "Only the reporting university can finalise or reopen admission intake.",
+        );
+        return false;
+      }
+      const cohort = session.studentCohorts.find(
+        (item) => item.id === cohortId,
+      );
+      if (!cohort) return false;
+      if (status === "in_progress" && cohort.admissionStatus === "finalised") {
+        if (!reason.trim()) {
+          toast(
+            "Reopening reason required",
+            "Explain why the final Semester 1 intake must be reopened.",
+          );
+          return false;
+        }
+      }
+      if (status === "finalised") {
+        const offeringBatches = session.courseBatches.filter(
+          (batch) =>
+            batch.courseOfferingId === cohort.courseOfferingId && batch.active,
+        );
+        const complete = offeringBatches.every((batch) =>
+          session.semesterStrengthSnapshots.some(
+            (snapshot) =>
+              snapshot.cohortId === cohortId &&
+              snapshot.courseBatchId === batch.id &&
+              snapshot.semesterNumber === 1 &&
+              snapshot.admissionIntake !== null,
+          ),
+        );
+        if (!complete) {
+          toast(
+            "Admission intake is incomplete",
+            "Report a whole-number intake for every active batch before finalising.",
+          );
+          return false;
+        }
+      }
+      const now = new Date().toISOString();
+      commit((current) => ({
+        ...current,
+        studentCohorts: current.studentCohorts.map((item) =>
+          item.id === cohortId
+            ? {
+                ...item,
+                admissionStatus: status,
+                admissionFinalisedAt:
+                  status === "finalised" ? now : null,
+                admissionReopenReason:
+                  status === "in_progress" ? reason.trim() : "",
+                lastUpdatedAt: now,
+              }
+            : item,
+        ),
+        demoAuditEntries: [
+          {
+            id: `admission-status-${Date.now()}`,
+            action:
+              status === "finalised"
+                ? "Semester 1 admission intake finalised"
+                : "Finalised admission intake reopened",
+            actor: "Prof. Anjali Menon",
+            actorRole: "University Academic Administrator",
+            scope: cohort.cohortLabel,
+            timestamp: new Date().toLocaleString("en-IN"),
+            detail:
+              reason.trim() ||
+              "All active batches have reported their final Semester 1 admission intake.",
+            previousValue: cohort.admissionStatus,
+            newValue: status,
+            workflowStage: "Semester 1 Admission Reporting",
+            reference: cohort.id,
+          },
+          ...current.demoAuditEntries,
+        ],
+      }));
+      toast(
+        status === "finalised"
+          ? "Admission intake finalised"
+          : "Admission intake reopened",
+        status === "finalised"
+          ? "Semester 1 figures are now protected until a reason is recorded for reopening."
+          : "Semester 1 figures can be updated again; the reason is preserved in the audit trail.",
+      );
+      return true;
+    },
+    [
+      commit,
+      session.activeRole,
+      session.courseBatches,
+      session.semesterStrengthSnapshots,
+      session.studentCohorts,
+      toast,
+    ],
+  );
+
   const setSelectedProgramme = useCallback(
     (selectedProgramme: Programme) => {
       commit((current) => ({ ...current, selectedProgramme }));
@@ -2075,6 +2408,8 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       reviewCourseOffering,
       copyCourseOfferingToNextYear,
       requestVerifiedCapacityChange,
+      saveStrengthReports,
+      setCohortAdmissionStatus,
       saveUniversityCalendarSubmission,
       submitUniversityCalendarSubmission,
       addUniversityCalendarReviewNote,
@@ -2119,6 +2454,8 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       reviewCourseOffering,
       copyCourseOfferingToNextYear,
       requestVerifiedCapacityChange,
+      saveStrengthReports,
+      setCohortAdmissionStatus,
       saveUniversityCalendarSubmission,
       submitUniversityCalendarSubmission,
       addUniversityCalendarReviewNote,
