@@ -4,7 +4,7 @@ import { HECCourseOfferingWorkspace } from "@/components/course-offerings/HECCou
 export const metadata: Metadata = {
   title: "HEC Course Offering Verification",
   description:
-    "Verify institutional course offerings, approval references and sanctioned batch capacity.",
+    "Verify institutional course offerings and approval references.",
 };
 
 export default function HECCourseOfferingPage() {

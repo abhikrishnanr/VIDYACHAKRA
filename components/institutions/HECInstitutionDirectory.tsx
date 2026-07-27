@@ -40,8 +40,6 @@ export function HECInstitutionDirectory() {
             university,
             units: state.academicDeliveryUnits,
             courseOfferings: state.courseOfferings,
-            courseBatches: state.courseBatches,
-            semesterStrengthSnapshots: state.semesterStrengthSnapshots,
             calendarSubmissions: state.universityCalendarSubmissions,
             requestStatus: state.requestStatus,
             masterCalendarVersion: state.masterCalendarVersion,
@@ -60,7 +58,7 @@ export function HECInstitutionDirectory() {
         )
         .filter(({ metrics }) =>
           focus === "complete"
-            ? metrics.reportingComplete
+            ? metrics.calendarCurrent
             : focus === "attention"
               ? metrics.attentionStatus !== "green"
               : true,
@@ -71,11 +69,9 @@ export function HECInstitutionDirectory() {
       model,
       query,
       state.academicDeliveryUnits,
-      state.courseBatches,
       state.courseOfferings,
       state.masterCalendarVersion,
       state.requestStatus,
-      state.semesterStrengthSnapshots,
       state.universityCalendarSubmissions,
       state.universityProfiles,
     ],
@@ -93,7 +89,7 @@ export function HECInstitutionDirectory() {
             onClick={() =>
               state.toast(
                 "Directory extract prepared",
-                "The institution structure and reporting summary is ready for the demonstration export.",
+                "The institution structure and course summary is ready for the demonstration export.",
               )
             }
           >
@@ -164,10 +160,10 @@ export function HECInstitutionDirectory() {
             <option key={item}>{item}</option>
           ))}
         </select>
-        <div className="institution-focus-filter" aria-label="Reporting and attention filter">
+        <div className="institution-focus-filter" aria-label="Calendar and attention filter">
           {[
             ["all", "Show all"],
-            ["complete", "Reporting complete"],
+            ["complete", "Calendar current"],
             ["attention", "Attention required"],
           ].map(([value, label]) => (
             <button
@@ -188,7 +184,6 @@ export function HECInstitutionDirectory() {
           <span>Delivery structure</span>
           <span>Courses</span>
           <span>Calendar submission</span>
-          <span>Student reporting</span>
           <span>Current attention</span>
           <span />
         </div>
@@ -235,15 +230,6 @@ export function HECInstitutionDirectory() {
                   : "Not started"}
               </strong>
               <small>{metrics.submission ? `Version ${metrics.submission.version}` : "No submission"}</small>
-            </span>
-            <span className="institution-reporting">
-              <strong>{metrics.reportingPercentage}%</strong>
-              <small>
-                {metrics.reportsSubmitted}/{metrics.reportsExpected} batch reports
-              </small>
-              <span>
-                <i style={{ width: `${metrics.reportingPercentage}%` }} />
-              </span>
             </span>
             <RagBadge
               status={metrics.attentionStatus}

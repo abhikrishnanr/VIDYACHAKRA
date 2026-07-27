@@ -1,15 +1,14 @@
 "use client";
 
 import {
-  BellRing,
   Building2,
   Download,
+  GraduationCap,
   Landmark,
   MapPin,
   Search,
 } from "lucide-react";
 import { useState } from "react";
-import { RagBadge } from "@/components/shared/RagBadge";
 import { useDemoState } from "@/lib/demo-state";
 import {
   getUnitMetrics,
@@ -37,20 +36,21 @@ export function UniversityDeliveryUnitMonitoring() {
     const matchesQuery = `${unit.name} ${unit.shortName} ${unit.institutionCode}`
       .toLowerCase()
       .includes(query.toLowerCase());
-    const matchesDistrict =
-      district === "all" || unit.district === district;
-    const matchesType = unitType === "all" || unit.unitType === unitType;
-    return matchesQuery && matchesDistrict && matchesType;
+    return (
+      matchesQuery &&
+      (district === "all" || unit.district === district) &&
+      (unitType === "all" || unit.unitType === unitType)
+    );
   });
-  const outstanding = units.filter((unit) => {
-    const metrics = getUnitMetrics({
-      unit,
-      courseOfferings: state.courseOfferings,
-      courseBatches: state.courseBatches,
-      semesterStrengthSnapshots: state.semesterStrengthSnapshots,
-    });
-    return !metrics.reportingComplete || metrics.offerings.length === 0;
-  }).length;
+  const universityCourseIds = new Set(
+    state.courseOfferings
+      .filter(
+        (offering) =>
+          offering.universityId === universityId &&
+          offering.offeringStatus !== "inactive",
+      )
+      .map((offering) => offering.courseMasterId),
+  );
 
   return (
     <div className="delivery-monitor-page">
@@ -59,40 +59,25 @@ export function UniversityDeliveryUnitMonitoring() {
           <p className="uni-kicker">One academic delivery network</p>
           <h1>Colleges and teaching units</h1>
           <p>
-            Monitor every Sahya delivery unit through the same course-offering,
-            batch-capacity and student-reporting relationships.
+            See the official HEC courses delivered by every Sahya university
+            campus, school and affiliated college.
           </p>
         </div>
-        <div>
-          <button
-            className="button button-secondary"
-            onClick={() =>
-              state.toast(
-                "Delivery-unit register prepared",
-                "A demonstration register with capacity and reporting status is ready.",
-              )
-            }
-          >
-            <Download size={16} /> Export register
-          </button>
-          <button
-            className="button button-primary"
-            onClick={() =>
-              state.toast(
-                "Reporting reminders sent",
-                `${outstanding} delivery units received a demonstration follow-up.`,
-              )
-            }
-          >
-            <BellRing size={16} /> Remind outstanding
-          </button>
-        </div>
+        <button
+          className="button button-secondary"
+          onClick={() =>
+            state.toast(
+              "Delivery-unit register prepared",
+              "A demonstration register of delivery units and official courses is ready.",
+            )
+          }
+        >
+          <Download size={16} /> Export register
+        </button>
       </header>
 
       <section className="delivery-network-band">
-        <span>
-          <Landmark size={24} />
-        </span>
+        <span><Landmark size={24} /></span>
         <div>
           <small>{university.name}</small>
           <strong>Hybrid academic delivery network</strong>
@@ -108,8 +93,8 @@ export function UniversityDeliveryUnitMonitoring() {
             <dd>Colleges</dd>
           </div>
           <div>
-            <dt>{outstanding}</dt>
-            <dd>Follow-up</dd>
+            <dt>{universityCourseIds.size}</dt>
+            <dd>Official courses</dd>
           </div>
         </dl>
       </section>
@@ -126,16 +111,12 @@ export function UniversityDeliveryUnitMonitoring() {
         <select value={unitType} onChange={(event) => setUnitType(event.target.value)}>
           <option value="all">All unit types</option>
           {Object.entries(unitTypeLabels).map(([value, label]) => (
-            <option value={value} key={value}>
-              {label}
-            </option>
+            <option value={value} key={value}>{label}</option>
           ))}
         </select>
         <select value={district} onChange={(event) => setDistrict(event.target.value)}>
           <option value="all">All districts</option>
-          {districts.map((item) => (
-            <option key={item}>{item}</option>
-          ))}
+          {districts.map((item) => <option key={item}>{item}</option>)}
         </select>
         <span>{visible.length} delivery units</span>
       </section>
@@ -149,10 +130,8 @@ export function UniversityDeliveryUnitMonitoring() {
                 <th>Unit type</th>
                 <th>District</th>
                 <th>Calendar coverage</th>
-                <th>Course offerings</th>
-                <th>Sanctioned capacity</th>
-                <th>Student reporting</th>
-                <th>Attention</th>
+                <th>Official courses</th>
+                <th>Offering status</th>
               </tr>
             </thead>
             <tbody>
@@ -160,11 +139,12 @@ export function UniversityDeliveryUnitMonitoring() {
                 const metrics = getUnitMetrics({
                   unit,
                   courseOfferings: state.courseOfferings,
-                  courseBatches: state.courseBatches,
-                  semesterStrengthSnapshots: state.semesterStrengthSnapshots,
                 });
-                const noOfferings = metrics.offerings.length === 0;
-                const status = noOfferings || !metrics.reportingComplete ? "amber" : "green";
+                const courses = metrics.distinctCourseIds
+                  .map((courseId) =>
+                    state.courseMasters.find((course) => course.id === courseId),
+                  )
+                  .filter(Boolean);
                 return (
                   <tr key={unit.id}>
                     <td>
@@ -200,25 +180,20 @@ export function UniversityDeliveryUnitMonitoring() {
                         {submission ? `Calendar ${submission.version}` : "No submission"}
                       </small>
                     </td>
-                    <td>{metrics.offerings.length}</td>
-                    <td>{metrics.sanctionedCapacity}</td>
                     <td>
-                      <strong>{metrics.reportingPercentage}%</strong>
-                      <small>
-                        {metrics.reportsSubmitted}/{metrics.reportsExpected} reports
-                      </small>
+                      <strong>{courses.map((course) => course?.shortName).join(", ") || "No course linked"}</strong>
+                      <small>{courses.length} official course{courses.length === 1 ? "" : "s"}</small>
                     </td>
                     <td>
-                      <RagBadge
-                        status={status}
-                        label={
-                          noOfferings
-                            ? "No active offering"
-                            : metrics.reportingComplete
-                              ? "Ready"
-                              : "Reporting follow-up"
-                        }
-                      />
+                      <span className="offering-status status-verified">
+                        <GraduationCap size={12} />
+                        {metrics.verifiedOfferings === metrics.offerings.length &&
+                        metrics.offerings.length
+                          ? "HEC verified"
+                          : metrics.offerings.length
+                            ? "Review in progress"
+                            : "No active offering"}
+                      </span>
                     </td>
                   </tr>
                 );
@@ -242,11 +217,6 @@ export function UniversityDeliveryUnitMonitoring() {
           </div>
         ) : null}
       </section>
-
-      <p className="delivery-monitor-footnote">
-        This page reports aggregated delivery-unit and batch information only. It
-        does not contain individual student records.
-      </p>
     </div>
   );
 }

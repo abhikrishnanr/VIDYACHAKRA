@@ -38,7 +38,7 @@ function formatDate(value: string) {
 
 export function AcademicYearMaster() {
   const state = useDemoState();
-  const canEdit = state.activeRole === "administrator";
+  const canEdit = true;
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>("ay-2026-27");
@@ -105,7 +105,7 @@ export function AcademicYearMaster() {
       <MasterWorkspaceShell
         active="academic-years"
         title="Academic Year Registry"
-        description="Control the planning horizon shared by calendar submissions, official course offerings and student reporting."
+        description="Control the planning horizon shared by calendar submissions and official course offerings."
         search={search}
         onSearch={setSearch}
         status={status}

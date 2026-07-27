@@ -1,9 +1,7 @@
 import type {
   AcademicDeliveryUnit,
-  CourseBatch,
   CourseOffering,
   RequestStatus,
-  SemesterStrengthSnapshot,
   UniversityCalendarSubmission,
   UniversityOperatingModel,
   UniversityProfile,
@@ -45,41 +43,20 @@ export function isCollegeDeliveryUnit(unit: AcademicDeliveryUnit) {
 export function getUnitMetrics(input: {
   unit: AcademicDeliveryUnit;
   courseOfferings: CourseOffering[];
-  courseBatches: CourseBatch[];
-  semesterStrengthSnapshots: SemesterStrengthSnapshot[];
 }) {
   const offerings = input.courseOfferings.filter(
     (offering) =>
       offering.deliveryUnitId === input.unit.id &&
       offering.offeringStatus !== "inactive",
   );
-  const offeringIds = new Set(offerings.map((offering) => offering.id));
-  const batches = input.courseBatches.filter(
-    (batch) => batch.active && offeringIds.has(batch.courseOfferingId),
-  );
-  const batchIds = new Set(batches.map((batch) => batch.id));
-  const snapshots = input.semesterStrengthSnapshots.filter((snapshot) =>
-    batchIds.has(snapshot.courseBatchId),
-  );
-  const submitted = snapshots.filter(
-    (snapshot) => snapshot.reportingStatus !== "not_started",
-  ).length;
-  const expected = batches.length;
-  const reportingPercentage =
-    expected === 0 ? 0 : Math.round((submitted / expected) * 100);
-
   return {
     offerings,
-    batches,
-    snapshots,
-    sanctionedCapacity: batches.reduce(
-      (total, batch) => total + Math.max(0, batch.sanctionedCapacity),
-      0,
+    distinctCourseIds: Array.from(
+      new Set(offerings.map((offering) => offering.courseMasterId)),
     ),
-    reportingPercentage,
-    reportingComplete: expected > 0 && submitted >= expected,
-    reportsExpected: expected,
-    reportsSubmitted: submitted,
+    verifiedOfferings: offerings.filter(
+      (offering) => offering.offeringStatus === "verified",
+    ).length,
   };
 }
 
@@ -87,8 +64,6 @@ export function getUniversityMetrics(input: {
   university: UniversityProfile;
   units: AcademicDeliveryUnit[];
   courseOfferings: CourseOffering[];
-  courseBatches: CourseBatch[];
-  semesterStrengthSnapshots: SemesterStrengthSnapshot[];
   calendarSubmissions: UniversityCalendarSubmission[];
   requestStatus: RequestStatus;
   masterCalendarVersion: string;
@@ -101,31 +76,16 @@ export function getUniversityMetrics(input: {
       offering.universityId === input.university.id &&
       offering.offeringStatus !== "inactive",
   );
-  const offeringIds = new Set(offerings.map((offering) => offering.id));
-  const batches = input.courseBatches.filter(
-    (batch) => batch.active && offeringIds.has(batch.courseOfferingId),
-  );
-  const batchIds = new Set(batches.map((batch) => batch.id));
-  const snapshots = input.semesterStrengthSnapshots.filter((snapshot) =>
-    batchIds.has(snapshot.courseBatchId),
-  );
-  const submitted = snapshots.filter(
-    (snapshot) => snapshot.reportingStatus !== "not_started",
-  ).length;
-  const expected = batches.length;
-  const reportingPercentage =
-    expected === 0 ? 0 : Math.round((submitted / expected) * 100);
   const submission = input.calendarSubmissions.find(
     (item) => item.universityId === input.university.id,
   );
   const sahyaIssueOpen =
     input.university.id === "sahya" && input.masterCalendarVersion !== "1.1";
-  const reportingIncomplete = expected === 0 || submitted < expected;
   const submissionNeedsAttention =
     !submission ||
     ["draft", "submitted", "under_review", "returned"].includes(submission.status);
   const critical = sahyaIssueOpen && input.requestStatus === "draft";
-  const attention = sahyaIssueOpen || reportingIncomplete || submissionNeedsAttention;
+  const attention = sahyaIssueOpen || submissionNeedsAttention;
 
   return {
     units,
@@ -140,16 +100,15 @@ export function getUniversityMetrics(input: {
     distinctCourseCount: new Set(
       offerings.map((offering) => offering.courseMasterId),
     ).size,
-    reportingPercentage,
-    reportingComplete: expected > 0 && submitted >= expected,
-    reportsExpected: expected,
-    reportsSubmitted: submitted,
     submission,
+    calendarCurrent:
+      Boolean(submission) &&
+      ["accepted", "locked"].includes(submission?.status ?? ""),
     attentionStatus: critical ? "red" : attention ? "amber" : "green",
     attentionLabel: critical
       ? "Critical calendar attention"
       : attention
-        ? "Attention required"
-        : "Aligned and reporting",
+        ? "Calendar attention required"
+        : "Calendar aligned",
   } as const;
 }

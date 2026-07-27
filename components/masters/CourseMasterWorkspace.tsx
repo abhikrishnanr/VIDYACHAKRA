@@ -36,7 +36,7 @@ const blankCourse: CourseMaster = {
 
 export function CourseMasterWorkspace() {
   const state = useDemoState();
-  const canEdit = state.activeRole === "administrator";
+  const canEdit = true;
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>("cm-bsc-cs");

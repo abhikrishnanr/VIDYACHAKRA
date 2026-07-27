@@ -8,11 +8,7 @@ import {
   CalendarDays,
   Check,
   CircleAlert,
-  Copy,
   GraduationCap,
-  Layers3,
-  Minus,
-  Plus,
   Save,
   ShieldCheck,
 } from "lucide-react";
@@ -23,24 +19,7 @@ import { CourseMasterCombobox } from "@/components/domain/CourseMasterCombobox";
 import { Modal } from "@/components/shared/Modal";
 import { findDuplicateOffering } from "@/lib/course-offerings";
 import { useDemoState } from "@/lib/demo-state";
-import type {
-  CourseBatch,
-  CourseOffering,
-} from "@/lib/types";
-
-type BatchDraft = {
-  clientKey: string;
-  label: string;
-  capacity: string;
-  active: boolean;
-};
-
-const emptyBatch = (): BatchDraft => ({
-  clientKey: `draft-${globalThis.crypto?.randomUUID?.() ?? Date.now()}`,
-  label: "Batch A",
-  capacity: "40",
-  active: true,
-});
+import type { CourseOffering } from "@/lib/types";
 
 export function CourseOfferingForm() {
   const state = useDemoState();
@@ -62,17 +41,10 @@ export function CourseOfferingForm() {
   const [effectiveTo, setEffectiveTo] = useState("");
   const [offeringStatus, setOfferingStatus] =
     useState<CourseOffering["offeringStatus"]>("draft");
-  const [batches, setBatches] = useState<BatchDraft[]>(() => [emptyBatch()]);
   const [courseHelpOpen, setCourseHelpOpen] = useState(false);
 
   useEffect(() => {
-    if (
-      !state.hydrated ||
-      !existing ||
-      loadedRef.current === existing.id
-    ) {
-      return;
-    }
+    if (!state.hydrated || !existing || loadedRef.current === existing.id) return;
     loadedRef.current = existing.id;
     setAcademicYearId(existing.academicYearId);
     setDeliveryUnitId(existing.deliveryUnitId);
@@ -83,17 +55,7 @@ export function CourseOfferingForm() {
     setEffectiveFrom(existing.effectiveFrom);
     setEffectiveTo(existing.effectiveTo ?? "");
     setOfferingStatus(existing.offeringStatus);
-    setBatches(
-      state.courseBatches
-        .filter((batch) => batch.courseOfferingId === existing.id)
-        .map((batch) => ({
-          clientKey: batch.id,
-          label: batch.batchLabel,
-          capacity: String(batch.sanctionedCapacity),
-          active: batch.active,
-        })),
-    );
-  }, [existing, state.courseBatches, state.hydrated]);
+  }, [existing, state.hydrated]);
 
   const selectedCourse = state.courseMasters.find(
     (course) => course.id === courseMasterId,
@@ -104,12 +66,6 @@ export function CourseOfferingForm() {
   const selectedYear = state.academicYears.find(
     (year) => year.id === academicYearId,
   );
-  const totalCapacity = batches
-    .filter((batch) => batch.active)
-    .reduce(
-      (total, batch) => total + (Number(batch.capacity) || 0),
-      0,
-    );
   const duplicate = useMemo(() => {
     if (!deliveryUnitId || !courseMasterId) return undefined;
     return findDuplicateOffering(
@@ -133,113 +89,11 @@ export function CourseOfferingForm() {
     state.courseOfferings,
   ]);
 
-  function updateBatch(
-    key: string,
-    patch: Partial<Omit<BatchDraft, "clientKey">>,
-  ) {
-    setBatches((current) =>
-      current.map((batch) =>
-        batch.clientKey === key ? { ...batch, ...patch } : batch,
-      ),
-    );
-  }
-
-  function addBatch() {
-    setBatches((current) => [
-      ...current,
-      {
-        clientKey: `draft-${globalThis.crypto?.randomUUID?.() ?? Date.now()}`,
-        label: `Batch ${String.fromCharCode(65 + current.length)}`,
-        capacity: "40",
-        active: true,
-      },
-    ]);
-  }
-
-  function removeBatch(key: string) {
-    if (batches.length === 1) {
-      state.toast(
-        "One batch is required",
-        "An offering must retain at least one approved batch row.",
-      );
-      return;
-    }
-    setBatches((current) =>
-      current.filter((batch) => batch.clientKey !== key),
-    );
-  }
-
-  function copyPreviousCapacity() {
-    if (!deliveryUnitId || !courseMasterId) {
-      state.toast(
-        "Select the academic context",
-        "Choose a delivery unit and official course before copying capacity.",
-      );
-      return;
-    }
-    const years = [...state.academicYears].sort((a, b) =>
-      a.startDate.localeCompare(b.startDate),
-    );
-    const yearIndex = years.findIndex((year) => year.id === academicYearId);
-    const previousYear = years[yearIndex - 1];
-    if (!previousYear) {
-      state.toast(
-        "No previous academic year",
-        "The selected academic year has no earlier offering to copy.",
-      );
-      return;
-    }
-    const previousOffering = state.courseOfferings.find(
-      (offering) =>
-        offering.academicYearId === previousYear.id &&
-        offering.deliveryUnitId === deliveryUnitId &&
-        offering.courseMasterId === courseMasterId &&
-        offering.mode === mode &&
-        offering.shift === shift,
-    );
-    if (!previousOffering) {
-      state.toast(
-        "Previous offering not found",
-        "No matching delivery unit, course, mode and shift combination exists in the previous year.",
-      );
-      return;
-    }
-    const previousBatches = state.courseBatches.filter(
-      (batch) => batch.courseOfferingId === previousOffering.id,
-    );
-    setBatches(
-      previousBatches.map((batch, index) => ({
-        clientKey: `copy-${index}-${globalThis.crypto?.randomUUID?.() ?? Date.now()}`,
-        label: batch.batchLabel,
-        capacity: String(batch.sanctionedCapacity),
-        active: batch.active,
-      })),
-    );
-    state.toast(
-      "Previous capacity copied",
-      `${previousBatches.length} batch row${previousBatches.length === 1 ? "" : "s"} copied from ${previousYear.label}.`,
-    );
-  }
-
   function save() {
     if (!deliveryUnitId || !courseMasterId || !effectiveFrom) {
       state.toast(
         "Complete the academic context",
         "Academic year, delivery unit, official course and effective-from date are required.",
-      );
-      return;
-    }
-    if (
-      batches.some(
-        (batch) =>
-          !batch.label.trim() ||
-          !Number.isFinite(Number(batch.capacity)) ||
-          Number(batch.capacity) <= 0,
-      )
-    ) {
-      state.toast(
-        "Complete approved batches",
-        "Every batch needs a label and positive sanctioned capacity.",
       );
       return;
     }
@@ -268,16 +122,7 @@ export function CourseOfferingForm() {
       reviewNote: existing?.reviewNote ?? "",
       lastUpdatedAt: existing?.lastUpdatedAt ?? new Date().toISOString(),
     };
-    const approvedBatches: CourseBatch[] = batches.map((batch, index) => ({
-      id: batch.clientKey.startsWith("batch-")
-        ? batch.clientKey
-        : `batch-${id}-${index + 1}`,
-      courseOfferingId: id,
-      batchLabel: batch.label.trim(),
-      sanctionedCapacity: Math.round(Number(batch.capacity)),
-      active: batch.active,
-    }));
-    if (state.saveCourseOffering(record, approvedBatches)) {
+    if (state.saveCourseOffering(record)) {
       window.setTimeout(
         () => router.push(`/university/course-offerings/${id}`),
         0,
@@ -288,17 +133,15 @@ export function CourseOfferingForm() {
   return (
     <div className="offering-page offering-form-page">
       <header className="offering-form-header">
-        <button
-          onClick={() => router.push("/university/course-offerings")}
-        >
+        <button onClick={() => router.push("/university/course-offerings")}>
           <ArrowLeft size={14} /> Course offerings
         </button>
         <div>
           <p className="offering-kicker">Guided offering setup</p>
           <h1>{existing ? "Update course offering draft" : "Create course offering"}</h1>
           <p>
-            Bind one active HEC course to one academic delivery unit and define
-            sanctioned capacity through approved batch rows.
+            Select one active HEC course and link it to the academic delivery
+            unit where it is offered.
           </p>
         </div>
         <button className="button button-primary" onClick={save}>
@@ -373,10 +216,7 @@ export function CourseOfferingForm() {
                   onChange={setCourseMasterId}
                   label="Course from HEC Course Master"
                 />
-                <button
-                  type="button"
-                  onClick={() => setCourseHelpOpen(true)}
-                >
+                <button type="button" onClick={() => setCourseHelpOpen(true)}>
                   Course not listed in the HEC master?
                 </button>
               </div>
@@ -439,9 +279,7 @@ export function CourseOfferingForm() {
                 <span>Approval reference</span>
                 <input
                   value={approvalReference}
-                  onChange={(event) =>
-                    setApprovalReference(event.target.value)
-                  }
+                  onChange={(event) => setApprovalReference(event.target.value)}
                   placeholder="HEC/OFFER/2026/..."
                 />
                 {!approvalReference.trim() ? (
@@ -486,80 +324,6 @@ export function CourseOfferingForm() {
               </label>
             </div>
           </section>
-
-          <section className="offering-form-section batch-section">
-            <header>
-              <span><Layers3 size={19} /></span>
-              <div>
-                <p>Section 3</p>
-                <h2>Approved Batches</h2>
-                <small>Sanctioned capacity is the sum of active batch rows.</small>
-              </div>
-              <button onClick={copyPreviousCapacity}>
-                <Copy size={13} /> Copy Previous Academic Year Capacity
-              </button>
-            </header>
-            <div className="batch-editor-head batch-editor-grid">
-              <span>Batch label</span>
-              <span>Sanctioned capacity</span>
-              <span>Active status</span>
-              <span />
-            </div>
-            <div className="batch-editor-list">
-              {batches.map((batch) => (
-                <div className="batch-editor-row batch-editor-grid" key={batch.clientKey}>
-                  <input
-                    value={batch.label}
-                    onChange={(event) =>
-                      updateBatch(batch.clientKey, {
-                        label: event.target.value,
-                      })
-                    }
-                    aria-label="Batch label"
-                  />
-                  <input
-                    type="number"
-                    min="1"
-                    value={batch.capacity}
-                    onChange={(event) =>
-                      updateBatch(batch.clientKey, {
-                        capacity: event.target.value,
-                      })
-                    }
-                    aria-label="Sanctioned capacity"
-                  />
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={batch.active}
-                      onChange={(event) =>
-                        updateBatch(batch.clientKey, {
-                          active: event.target.checked,
-                        })
-                      }
-                    />
-                    <span>{batch.active ? "Active batch" : "Inactive batch"}</span>
-                  </label>
-                  <button
-                    onClick={() => removeBatch(batch.clientKey)}
-                    aria-label={`Remove ${batch.label}`}
-                  >
-                    <Minus size={14} /> Remove Draft Batch
-                  </button>
-                </div>
-              ))}
-            </div>
-            <footer className="batch-editor-footer">
-              <button onClick={addBatch}>
-                <Plus size={14} /> Add Another Batch
-              </button>
-              <div>
-                <span>Total Sanctioned Capacity</span>
-                <strong>{totalCapacity}</strong>
-                <small>Calculated from active approved batches</small>
-              </div>
-            </footer>
-          </section>
         </main>
 
         <aside className="offering-form-summary">
@@ -569,13 +333,12 @@ export function CourseOfferingForm() {
           <dl>
             <div><dt>Academic year</dt><dd>{selectedYear?.label ?? "—"}</dd></div>
             <div><dt>Delivery unit</dt><dd>{selectedUnit?.shortName ?? "Not selected"}</dd></div>
+            <div><dt>Course code</dt><dd>{selectedCourse?.courseCode ?? "Not selected"}</dd></div>
             <div><dt>Mode and shift</dt><dd>{mode.replaceAll("_", " ")} · {shift}</dd></div>
-            <div><dt>Approved batches</dt><dd>{batches.filter((batch) => batch.active).length}</dd></div>
-            <div><dt>Sanctioned capacity</dt><dd>{totalCapacity}</dd></div>
           </dl>
           <div>
             <Check size={14} />
-            Total capacity cannot be edited separately from the batch rows.
+            Universities can select only active HEC Course Master records.
           </div>
         </aside>
       </div>
@@ -591,8 +354,8 @@ export function CourseOfferingForm() {
             <strong>Universities cannot create new course names.</strong>
             <p>Send a master-data request to HEC.</p>
             <small>
-              There is no free-text workaround. The course becomes selectable
-              only after HEC activates it in the official Course Master.
+              The course becomes selectable only after HEC activates it in the
+              official Course Master.
             </small>
           </div>
         </div>

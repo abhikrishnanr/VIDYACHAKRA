@@ -17,7 +17,6 @@
 15. Universities cannot create course names.
 16. University course selectors must use active HEC Course Master records.
 17. Course offerings always belong to AcademicDeliveryUnits.
-18. Semester 1 shows admission vacancies.
-19. Semesters 2 to 8 show current strength gaps.
-20. Calendar compliance and seat utilisation must use separate labels and legends.
-21. Do not remove the existing academic calendar governance workflow.
+18. Do not add seat, intake, vacancy, capacity or student-strength reporting.
+19. Keep course offerings focused on official course and delivery-unit details.
+20. Do not remove the existing academic calendar governance workflow.

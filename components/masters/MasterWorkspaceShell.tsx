@@ -67,9 +67,9 @@ export function MasterWorkspaceShell({
   resultLabel: string;
   children: ReactNode;
 }) {
-  const { activeRole, academicYears, calendarMilestoneDefinitions, courseMasters } =
+  const { academicYears, calendarMilestoneDefinitions, courseMasters } =
     useDemoState();
-  const canEdit = activeRole === "administrator";
+  const canEdit = true;
   const counts: Record<MasterKind, number> = {
     "academic-years": academicYears.length,
     "calendar-milestones": calendarMilestoneDefinitions.length,

@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
-  buildAllCourseOfferingMetrics,
+  buildAllCourseOfferingDetails,
   duplicateOfferingIds,
   formatOfferingDate,
   offeringStatusLabel,
@@ -33,24 +33,18 @@ export function HECCourseOfferingWorkspace() {
   const [selectedId, setSelectedId] = useState<string | null>("off-026");
   const [note, setNote] = useState("");
 
-  const allMetrics = useMemo(
+  const allOfferings = useMemo(
     () =>
-      buildAllCourseOfferingMetrics({
+      buildAllCourseOfferingDetails({
         offerings: state.courseOfferings,
         universities: state.universityProfiles,
         units: state.academicDeliveryUnits,
         courses: state.courseMasters,
-        batches: state.courseBatches,
-        cohorts: state.studentCohorts,
-        snapshots: state.semesterStrengthSnapshots,
       }),
     [
       state.academicDeliveryUnits,
-      state.courseBatches,
       state.courseMasters,
       state.courseOfferings,
-      state.semesterStrengthSnapshots,
-      state.studentCohorts,
       state.universityProfiles,
     ],
   );
@@ -60,33 +54,30 @@ export function HECCourseOfferingWorkspace() {
   );
   const visible = useMemo(
     () =>
-      allMetrics
+      allOfferings
         .filter(
-          (metric) =>
+          (item) =>
             universityId === "all" ||
-            metric.offering.universityId === universityId,
+            item.offering.universityId === universityId,
         )
-        .filter((metric) =>
+        .filter((item) =>
           status === "all"
             ? true
             : status === "unverified"
               ? ["draft", "submitted", "returned"].includes(
-                  metric.offering.offeringStatus,
+                  item.offering.offeringStatus,
                 )
-              : metric.offering.offeringStatus === status,
+              : item.offering.offeringStatus === status,
         )
-        .filter((metric) => {
+        .filter((item) => {
           if (issue === "missing_reference") {
-            return !metric.offering.approvalReference.trim();
+            return !item.offering.approvalReference.trim();
           }
-          if (issue === "duplicate") {
-            return duplicateIds.has(metric.offering.id);
-          }
-          if (issue === "reporting") return metric.reportingIncomplete;
+          if (issue === "duplicate") return duplicateIds.has(item.offering.id);
           return true;
         })
-        .filter((metric) =>
-          `${metric.university?.name} ${metric.unit?.name} ${metric.course?.courseName} ${metric.course?.courseCode}`
+        .filter((item) =>
+          `${item.university?.name} ${item.unit?.name} ${item.course?.courseName} ${item.course?.courseCode}`
             .toLowerCase()
             .includes(query.toLowerCase()),
         )
@@ -99,23 +90,16 @@ export function HECCourseOfferingWorkspace() {
             (a.university?.name ?? "").localeCompare(b.university?.name ?? "")
           );
         }),
-    [allMetrics, duplicateIds, issue, query, status, universityId],
+    [allOfferings, duplicateIds, issue, query, status, universityId],
   );
   const selected =
-    allMetrics.find((metric) => metric.offering.id === selectedId) ?? null;
-
-  const missingReferences = allMetrics.filter(
-    (metric) => !metric.offering.approvalReference.trim(),
+    allOfferings.find((item) => item.offering.id === selectedId) ?? null;
+  const missingReferences = allOfferings.filter(
+    (item) => !item.offering.approvalReference.trim(),
   ).length;
-  const unverified = allMetrics.filter((metric) =>
-    ["draft", "submitted", "returned"].includes(
-      metric.offering.offeringStatus,
-    ),
+  const unverified = allOfferings.filter((item) =>
+    ["draft", "submitted", "returned"].includes(item.offering.offeringStatus),
   ).length;
-  const statewideCapacity = allMetrics.reduce(
-    (total, metric) => total + metric.totalCapacity,
-    0,
-  );
 
   function review(action: "verify" | "return" | "note") {
     if (!selected) return;
@@ -128,11 +112,11 @@ export function HECCourseOfferingWorkspace() {
     <div className="offering-page hec-offering-page">
       <header className="offering-page-header">
         <div>
-          <p className="offering-kicker">HEC read-oriented verification</p>
+          <p className="offering-kicker">HEC course verification</p>
           <h1>Course offering verification</h1>
           <p>
-            Review university, delivery-unit, official course and batch capacity
-            records without introducing a separate capacity committee workflow.
+            Verify that each academic delivery unit is linked to an official
+            HEC course with a valid approval reference.
           </p>
         </div>
         <button
@@ -152,15 +136,12 @@ export function HECCourseOfferingWorkspace() {
         <div className="lead">
           <span><ShieldCheck size={22} /></span>
           <div>
-            <small>Statewide offering assurance</small>
+            <small>Statewide course assurance</small>
             <strong>
               {unverified} offering{unverified === 1 ? "" : "s"} require
               verification attention
             </strong>
-            <p>
-              {statewideCapacity} sanctioned seats across{" "}
-              {allMetrics.length} delivery-unit course offerings.
-            </p>
+            <p>{allOfferings.length} delivery-unit course records are in the register.</p>
           </div>
         </div>
         <div>
@@ -191,10 +172,7 @@ export function HECCourseOfferingWorkspace() {
         </label>
         <label>
           <span>University</span>
-          <select
-            value={universityId}
-            onChange={(event) => setUniversityId(event.target.value)}
-          >
+          <select value={universityId} onChange={(event) => setUniversityId(event.target.value)}>
             <option value="all">All universities</option>
             {state.universityProfiles.map((university) => (
               <option key={university.id} value={university.id}>
@@ -205,10 +183,7 @@ export function HECCourseOfferingWorkspace() {
         </label>
         <label>
           <span>Offering status</span>
-          <select
-            value={status}
-            onChange={(event) => setStatus(event.target.value)}
-          >
+          <select value={status} onChange={(event) => setStatus(event.target.value)}>
             <option value="unverified">Unverified offerings</option>
             <option value="all">All statuses</option>
             <option value="submitted">Submitted</option>
@@ -219,14 +194,10 @@ export function HECCourseOfferingWorkspace() {
         </label>
         <label>
           <span>Verification issue</span>
-          <select
-            value={issue}
-            onChange={(event) => setIssue(event.target.value)}
-          >
+          <select value={issue} onChange={(event) => setIssue(event.target.value)}>
             <option value="all">All issue types</option>
             <option value="missing_reference">Missing approval reference</option>
             <option value="duplicate">Duplicate warnings</option>
-            <option value="reporting">Student reporting incomplete</option>
           </select>
         </label>
       </section>
@@ -234,53 +205,46 @@ export function HECCourseOfferingWorkspace() {
       <div className="hec-offering-layout">
         <section className="hec-offering-register">
           <div className="hec-offering-head hec-offering-grid">
-            <span>University & delivery unit</span>
+            <span>University &amp; delivery unit</span>
             <span>Official course</span>
             <span>Academic year</span>
-            <span>Sanctioned capacity</span>
             <span>Approval assurance</span>
             <span>Status</span>
           </div>
-          {visible.map((metric) => (
+          {visible.map((item) => (
             <button
               className={`hec-offering-row hec-offering-grid ${
-                selectedId === metric.offering.id ? "selected" : ""
+                selectedId === item.offering.id ? "selected" : ""
               }`}
-              key={metric.offering.id}
-              onClick={() => setSelectedId(metric.offering.id)}
+              key={item.offering.id}
+              onClick={() => setSelectedId(item.offering.id)}
             >
               <div>
                 <span><Building2 size={16} /></span>
                 <div>
-                  <strong>{metric.university?.shortName}</strong>
-                  <small>{metric.unit?.name}</small>
-                  <em>{metric.unit ? unitTypeLabels[metric.unit.unitType] : ""}</em>
+                  <strong>{item.university?.shortName}</strong>
+                  <small>{item.unit?.name}</small>
+                  <em>{item.unit ? unitTypeLabels[item.unit.unitType] : ""}</em>
                 </div>
               </div>
               <div>
-                <strong>{metric.course?.courseName}</strong>
-                <small>{metric.course?.courseCode} · {metric.course?.discipline}</small>
+                <strong>{item.course?.courseName}</strong>
+                <small>{item.course?.courseCode} · {item.course?.discipline}</small>
               </div>
               <div>
                 <strong>
-                  {
-                    state.academicYears.find(
-                      (year) => year.id === metric.offering.academicYearId,
-                    )?.label
-                  }
+                  {state.academicYears.find(
+                    (year) => year.id === item.offering.academicYearId,
+                  )?.label}
                 </strong>
-                <small>{metric.offering.mode.replaceAll("_", " ")} · {metric.offering.shift}</small>
+                <small>{item.offering.mode.replaceAll("_", " ")} · {item.offering.shift}</small>
               </div>
               <div>
-                <strong>{metric.totalCapacity}</strong>
-                <small>{metric.batches.length} approved batch{metric.batches.length === 1 ? "" : "es"}</small>
-              </div>
-              <div>
-                {!metric.offering.approvalReference.trim() ? (
+                {!item.offering.approvalReference.trim() ? (
                   <span className="assurance-warning">
                     <AlertTriangle size={12} /> Approval reference missing
                   </span>
-                ) : duplicateIds.has(metric.offering.id) ? (
+                ) : duplicateIds.has(item.offering.id) ? (
                   <span className="assurance-warning">
                     <CircleAlert size={12} /> Possible duplicate
                   </span>
@@ -289,18 +253,18 @@ export function HECCourseOfferingWorkspace() {
                     <CheckCircle2 size={12} /> Reference recorded
                   </span>
                 )}
-                <small>{metric.offering.approvalReference || "Correction required"}</small>
+                <small>{item.offering.approvalReference || "Correction required"}</small>
               </div>
               <div>
-                <span className={`offering-status status-${metric.offering.offeringStatus}`}>
-                  {metric.offering.offeringStatus === "verified" ? (
+                <span className={`offering-status status-${item.offering.offeringStatus}`}>
+                  {item.offering.offeringStatus === "verified" ? (
                     <ShieldCheck size={12} />
                   ) : (
                     <BookOpenCheck size={12} />
                   )}
-                  {offeringStatusLabel(metric.offering.offeringStatus)}
+                  {offeringStatusLabel(item.offering.offeringStatus)}
                 </span>
-                <small>{formatOfferingDate(metric.offering.lastUpdatedAt)}</small>
+                <small>{formatOfferingDate(item.offering.lastUpdatedAt)}</small>
               </div>
             </button>
           ))}
@@ -342,11 +306,10 @@ export function HECCourseOfferingWorkspace() {
               </section>
               <dl>
                 <div><dt>University</dt><dd>{selected.university?.name}</dd></div>
-                <div><dt>Approved batches</dt><dd>{selected.batches.length}</dd></div>
-                <div><dt>Sanctioned capacity</dt><dd>{selected.totalCapacity}</dd></div>
+                <div><dt>Course code</dt><dd>{selected.course?.courseCode}</dd></div>
+                <div><dt>Discipline</dt><dd>{selected.course?.discipline}</dd></div>
                 <div><dt>Approval reference</dt><dd>{selected.offering.approvalReference || "Missing"}</dd></div>
                 <div><dt>Duplicate check</dt><dd>{duplicateIds.has(selected.offering.id) ? "Warning found" : "No duplicate found"}</dd></div>
-                <div><dt>Student reporting</dt><dd>{selected.reportingIncomplete ? "Incomplete" : "Reported"}</dd></div>
               </dl>
               {selected.offering.reviewNote ? (
                 <div className="hec-existing-note">
@@ -378,14 +341,14 @@ export function HECCourseOfferingWorkspace() {
                 ) : null}
               </div>
               <small className="hec-review-footnote">
-                Verification protects capacity. It does not create a committee
-                workflow in this prototype.
+                Verification confirms the official course, delivery unit and
+                approval reference.
               </small>
             </>
           ) : (
             <div className="hec-review-empty">
               <ClipboardCheck size={25} />
-              <p>Select an offering to review its approval and capacity record.</p>
+              <p>Select an offering to review its course and approval details.</p>
             </div>
           )}
         </aside>

@@ -181,49 +181,6 @@ export type CourseOffering = {
   lastUpdatedAt: string;
 };
 
-export type CourseBatch = {
-  id: string;
-  courseOfferingId: string;
-  batchLabel: string;
-  sanctionedCapacity: number;
-  active: boolean;
-};
-
-export type StudentCohort = {
-  id: string;
-  courseOfferingId: string;
-  admissionAcademicYearId: string;
-  cohortLabel: string;
-  admissionStatus: "not_started" | "in_progress" | "finalised";
-  admissionFinalisedAt?: string | null;
-  admissionReopenReason?: string;
-  lastUpdatedAt: string | null;
-};
-
-export type SemesterStrengthSnapshot = {
-  id: string;
-  cohortId: string;
-  courseBatchId: string;
-  semesterNumber: SemesterNumber;
-  sanctionedCapacity: number;
-  currentStrength: number | null;
-  admissionIntake: number | null;
-  reportingDate: string;
-  reportingStatus: "not_started" | "draft" | "submitted" | "verified";
-  remarks: string;
-  updatedAt: string | null;
-};
-
-export type StrengthReportUpdate = {
-  cohortId: string;
-  courseBatchId: string;
-  semesterNumber: SemesterNumber;
-  reportedStrength: number | null;
-  reportingDate: string;
-  reportingStatus: SemesterStrengthSnapshot["reportingStatus"];
-  remarks: string;
-};
-
 export type RequestStatus =
   | "draft"
   | "submitted"
@@ -315,9 +272,6 @@ export type DemoSessionState = {
   universityCalendarSubmissions: UniversityCalendarSubmission[];
   universityCalendarEntries: UniversityCalendarEntry[];
   courseOfferings: CourseOffering[];
-  courseBatches: CourseBatch[];
-  studentCohorts: StudentCohort[];
-  semesterStrengthSnapshots: SemesterStrengthSnapshot[];
 };
 
 export type RoleNavigationItem = {
@@ -339,10 +293,7 @@ export type RoleNavigationItem = {
     | "audit"
     | "master"
     | "course"
-    | "admission"
-    | "vacancy"
-    | "structure"
-    | "students";
+    | "structure";
 };
 
 export type DemoRoleDefinition = {
